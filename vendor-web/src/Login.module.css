@@ -1,0 +1,354 @@
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.leftPanel {
+  flex: 0 0 45%;
+  background-color: var(--primary-blue);
+  /* Subtle pattern */
+  background-image: radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 25%),
+                    radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.03) 0%, transparent 25%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.brandName {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brandNameLight {
+  font-weight: 300;
+  opacity: 0.8;
+  background: none;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: currentcolor;
+  color: #e2e8f0;
+}
+
+.brandText {
+  margin-top: 40px;
+  max-width: 400px;
+}
+
+.brandText h1 {
+  font-size: 36px;
+  line-height: 1.2;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+
+.brandText p {
+  font-size: 16px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.illustrationContainer {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+  padding-top: 40px;
+}
+
+.illustration {
+  max-width: 90%;
+  height: auto;
+  object-fit: contain;
+}
+
+.rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-color);
+  position: relative;
+}
+
+.themeSelector {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.themeSelector:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .themeSelector:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.loginWrapper {
+  margin: auto;
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+}
+
+.loginHeader {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.loginHeader h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.loginHeader p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 14px;
+  color: #9ca3af;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.inputField {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 14px;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+
+.inputField:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(0, 92, 230, 0.1);
+}
+
+.eyeIcon {
+  position: absolute;
+  right: 14px;
+  color: #9ca3af;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.eyeIcon:hover {
+  color: var(--text-primary);
+}
+
+.formOptions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.checkboxWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  accent-color: var(--primary-blue);
+  cursor: pointer;
+}
+
+.forgotPassword {
+  color: var(--primary-blue);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.forgotPassword:hover {
+  text-decoration: underline;
+}
+
+.primaryButton {
+  width: 100%;
+  padding: 14px;
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+}
+
+.primaryButton:hover {
+  background-color: var(--primary-hover);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.divider::before { margin-right: 12px; }
+.divider::after { margin-left: 12px; }
+
+.googleButton {
+  width: 100%;
+  padding: 12px;
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: background-color 0.2s;
+  font-family: inherit;
+}
+
+.googleButton:hover {
+  background-color: rgba(0,0,0,0.02);
+}
+
+[data-theme="dark"] .googleButton:hover {
+  background-color: rgba(255,255,255,0.05);
+}
+
+.googleIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 32px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.contactAdmin {
+  color: var(--primary-blue);
+  font-weight: 500;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.contactAdmin:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Behaviour */
+@media (max-width: 900px) {
+  .leftPanel {
+    flex: 0 0 40%;
+    padding: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .leftPanel {
+    flex: none;
+    padding: 40px 20px;
+  }
+  
+  .illustrationContainer {
+    padding-top: 24px;
+  }
+  
+  .illustration {
+    max-width: 200px;
+  }
+  
+  .rightPanel {
+    padding-top: 60px;
+    padding-bottom: 40px;
+  }
+}

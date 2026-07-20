@@ -1,0 +1,501 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Horizontal Slider Track */
+.topSliderTrack {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.topSliderTrack::-webkit-scrollbar {
+  height: 6px;
+}
+
+.topSliderTrack::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.topSliderTrack::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.topSliderTrack::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.overviewCardItem {
+  min-width: 440px;
+  flex: 0 0 440px;
+}
+
+.topServicesCardItem {
+  min-width: 380px;
+  flex: 0 0 380px;
+}
+
+.metricCardItem {
+  min-width: 220px;
+  flex: 0 0 220px;
+}
+
+/* Metric Cards */
+.metricCard {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #f1f5f9;
+}
+
+.metricHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.metricIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metricIcon.revenue { background-color: #eef2ff; color: #4f46e5; }
+.metricIcon.pending { background-color: #fff7ed; color: #f97316; }
+.metricIcon.printing { background-color: #fefce8; color: #eab308; }
+.metricIcon.ready { background-color: #f0fdf4; color: #22c55e; }
+.metricIcon.completed { background-color: #f5f3ff; color: #8b5cf6; }
+
+.metricInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.metricLabel {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.metricValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.metricFooter {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f8fafc;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trendUp { color: #22c55e; font-weight: 600; }
+.trendNeutral { color: #64748b; }
+.trendWarning { color: #f97316; }
+.trendInfo { color: #3b82f6; }
+
+/* General Cards & Headers */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.viewAll {
+  color: #005CE6;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.viewAll:hover {
+  text-decoration: underline;
+}
+
+/* Today's Overview Card */
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dropdownBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+
+.overviewStatsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.overviewStatItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.overviewStatValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.overviewStatLabel {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.chartContainer {
+  height: 180px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Top Services Card */
+.servicesList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.serviceItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.serviceIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.serviceInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.serviceName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.serviceOrders {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.serviceRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 120px;
+}
+
+.serviceProgressBarTrack {
+  flex: 1;
+  height: 6px;
+  background-color: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.serviceProgressBarFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.servicePctText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  width: 30px;
+  text-align: right;
+}
+
+/* Orders Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+  color: #0f172a;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.orderId {
+  color: #005CE6;
+  font-weight: 600;
+}
+
+.studentInfo,
+.docInfo,
+.timeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 250px;
+}
+
+.studentInfo span,
+.docInfo span,
+.timeInfo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subText {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.docWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.docIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.docIcon.pdf { background-color: #ef4444; }
+.docIcon.img { background-color: #8b5cf6; }
+.docIcon.doc { background-color: #3b82f6; }
+.docIcon.defaultIcon { background-color: #64748b; }
+.docIcon.docx { background-color: #3b82f6; }
+.docIcon.xlsx { background-color: #22c55e; }
+
+.statusBadge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.statusBadge.pending { background-color: #fff7ed; color: #f97316; }
+.statusBadge.printing { background-color: #eff6ff; color: #3b82f6; }
+.statusBadge.ready { background-color: #f0fdf4; color: #22c55e; }
+.statusBadge.completed { background-color: #f1f5f9; color: #64748b; }
+
+.viewBtn {
+  padding: 6px 16px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 6px;
+  color: #005CE6;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewBtn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Caught Up Empty State Banner */
+.caughtUpContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  margin-top: 12px;
+  border-top: 1px solid #f8fafc;
+  gap: 4px;
+}
+
+.caughtUpIconBg {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.caughtUpTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.caughtUpSubtitle {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Modal Overlay for Top Services */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalCard {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.closeBtn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.closeBtn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modalStatRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+}

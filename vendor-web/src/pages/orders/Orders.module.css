@@ -1,0 +1,275 @@
+.ordersPage {
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.filtersRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tabs {
+  display: flex;
+  gap: 32px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  padding: 20px 0;
+  position: relative;
+}
+
+.tab.active {
+  color: #005CE6;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #005CE6;
+}
+
+.tabBadge {
+  background-color: #f1f5f9;
+  color: #64748b;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tab.active .tabBadge {
+  background-color: #005CE6;
+  color: white;
+}
+
+/* Specific Badge Colors */
+.tabBadge.pending { background-color: #fff7ed; color: #f97316; }
+.tabBadge.printing { background-color: #eff6ff; color: #3b82f6; }
+.tabBadge.ready { background-color: #f0fdf4; color: #22c55e; }
+.tabBadge.cancelled { background-color: #fef2f2; color: #ef4444; }
+
+.exportBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  color: #475569;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.exportBtn:hover {
+  background: #f8fafc;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 16px 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.sortIcon {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: #cbd5e1;
+}
+
+.table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #0f172a;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+}
+
+.orderId {
+  color: #005CE6;
+  font-weight: 600;
+}
+
+.studentInfo, .docInfo, .timeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 250px;
+}
+
+.studentInfo span, .docInfo span, .timeInfo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subText {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.docWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.docIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+}
+.docIcon.pdf { background-color: #ef4444; }
+.docIcon.img { background-color: #8b5cf6; }
+.docIcon.doc { background-color: #3b82f6; }
+.docIcon.defaultIcon { background-color: #64748b; }
+.docIcon.docx { background-color: #3b82f6; }
+.docIcon.xlsx { background-color: #22c55e; }
+
+.statusBadge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+  text-align: center;
+}
+.statusBadge.pending { background-color: #fff7ed; color: #f97316; }
+.statusBadge.printing { background-color: #eff6ff; color: #3b82f6; }
+.statusBadge.ready { background-color: #f0fdf4; color: #22c55e; }
+.statusBadge.completed { background-color: #f0fdf4; color: #22c55e; }
+.statusBadge.cancelled { background-color: #fef2f2; color: #ef4444; }
+
+.actionsWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.viewBtn {
+  padding: 6px 16px;
+  border: 1px solid #005CE6;
+  background: white;
+  border-radius: 6px;
+  color: #005CE6;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.viewBtn:hover {
+  background: #eff6ff;
+}
+
+.moreBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.showingText {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pageBtn.active {
+  background: #005CE6;
+  color: white;
+  border-color: #005CE6;
+}
+
+.pageBtn:hover:not(.active) {
+  background: #f8fafc;
+}
+
+.ellipsis {
+  color: #94a3b8;
+  padding: 0 4px;
+}
