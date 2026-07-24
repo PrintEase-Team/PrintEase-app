@@ -33,5 +33,9 @@ export const useOrderStore = create<OrderState>((set) => ({
   
   clearCurrentOrder: () => {
     set({ currentOrderId: null, currentFileId: null, filePageCount: 1, totalAmount: null });
+  },
+
+  reset: () => {
+    set({ currentOrderId: null, currentFileId: null, selectedShopId: null, filePageCount: 1, totalAmount: null });
   }
 }));

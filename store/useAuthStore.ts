@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService, LoginCredentials, RegisterDetails } from '../services/authService';
+import api from '../services/api';
 
 interface AuthState {
   token: string | null;
@@ -32,6 +33,30 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await authService.login(credentials);
       await AsyncStorage.setItem('token', response.token);
       await AsyncStorage.setItem('user_id', response.user_id);
+      
+      try {
+        const userRes = await api.get(`/users/${response.user_id}`);
+        const userData = userRes.data;
+        
+        if (userData.default_location_name) {
+          await AsyncStorage.setItem('defaultLocationName', userData.default_location_name);
+          await AsyncStorage.setItem('defaultLatitude', String(userData.default_latitude));
+          await AsyncStorage.setItem('defaultLongitude', String(userData.default_longitude));
+          
+          set({ 
+            token: response.token, 
+            user_id: response.user_id,
+            defaultLocationName: userData.default_location_name,
+            defaultLatitude: userData.default_latitude,
+            defaultLongitude: userData.default_longitude,
+            isLoading: false 
+          });
+          return;
+        }
+      } catch (err) {
+        console.log("Could not fetch user profile on login", err);
+      }
+      
       set({ token: response.token, user_id: response.user_id, isLoading: false });
     } catch (error: any) {
       set({ 
@@ -84,7 +109,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user_id');
-    set({ token: null, user_id: null });
+    await AsyncStorage.removeItem('defaultLocationName');
+    await AsyncStorage.removeItem('defaultLatitude');
+    await AsyncStorage.removeItem('defaultLongitude');
+    set({ 
+      token: null, 
+      user_id: null,
+      defaultLocationName: null,
+      defaultLatitude: null,
+      defaultLongitude: null
+    });
   },
 
   hydrate: async () => {

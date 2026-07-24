@@ -52,9 +52,12 @@ const getShopStatus = (shopData: any) => {
     }
   }
 
-  if (!shopData?.operating_hours || shopData.operating_hours === '{}') return 'Open';
+  let hoursString = shopData?.operating_hours;
+  if (!hoursString || hoursString === '{}') {
+    hoursString = '{"Monday":{"active":true,"open":"08:00","close":"17:00"},"Tuesday":{"active":true,"open":"08:00","close":"17:00"},"Wednesday":{"active":true,"open":"08:00","close":"17:00"},"Thursday":{"active":true,"open":"08:00","close":"17:00"},"Friday":{"active":true,"open":"08:00","close":"17:00"},"Saturday":{"active":false,"open":"09:00","close":"14:00"},"Sunday":{"active":false,"open":"10:00","close":"14:00"}}';
+  }
   try {
-    const hours = JSON.parse(shopData.operating_hours);
+    const hours = JSON.parse(hoursString);
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const today = days[new Date().getDay()];
     const todayHours = hours[today];

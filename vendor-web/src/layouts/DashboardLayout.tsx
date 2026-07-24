@@ -336,26 +336,6 @@ export default function DashboardLayout() {
                   </div>
                 )}
 
-                <div style={{ position: 'relative' }}>
-                  <button className={styles.notificationBtn} onClick={() => {
-                    const dropdown = document.getElementById('notif-dropdown');
-                    if(dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-                  }}>
-                    <Bell size={24} />
-                    <span className={styles.notificationBadge}>3</span>
-                  </button>
-                  
-                  {/* Basic Notification Dropdown */}
-                  <div id="notif-dropdown" style={{ display: 'none', position: 'absolute', top: 40, right: 0, width: 300, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', zIndex: 50 }}>
-                    <div style={{ padding: 16, borderBottom: '1px solid #f1f5f9' }}>
-                      <h4 style={{ margin: 0, fontSize: 14 }}>Notifications</h4>
-                    </div>
-                    <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                      No new notifications right now.
-                    </div>
-                  </div>
-                </div>
-
               </>
             )}
           </div>

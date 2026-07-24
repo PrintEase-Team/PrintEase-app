@@ -4,7 +4,7 @@ import axios from 'axios';
 // -------------------------------------------------------------------
 // IMPORTANT: UPDATE THIS IP ADDRESS WHENEVER YOU CHANGE NETWORKS/PCS!
 // -------------------------------------------------------------------
-const YOUR_CURRENT_IP = '10.205.36.240'; // <-- Change this to your PC's IP address
+const YOUR_CURRENT_IP = '10.167.0.240'; // <-- Change this to your PC's IP address
 
 const BASE_URL = `http://${YOUR_CURRENT_IP}:8080/api`;
 export const API_BASE = BASE_URL.replace('/api', '');

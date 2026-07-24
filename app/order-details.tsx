@@ -26,12 +26,36 @@ export default function OrderDetailsScreen() {
   const documentName = (params.documentName as string) || 'Unknown Document';
   const pagesInfo = (params.pagesInfo as string) || 'Loading...';
   const price = (params.price as string) || 'GHS --';
-  const status = (params.status as string) || 'Active';
+  const initialStatus = (params.status as string) || 'Active';
+  const [currentStatus, setCurrentStatus] = React.useState(initialStatus);
+
+  React.useEffect(() => {
+    if (!rawId || currentStatus === 'Collected' || currentStatus === 'Completed' || currentStatus === 'Cancelled') return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/orders/${rawId}`);
+        if (res.data && res.data.status) {
+          const newStatus = res.data.status;
+          if (newStatus !== currentStatus) {
+            setCurrentStatus(newStatus);
+            if (newStatus === 'Collected' || newStatus === 'Completed') {
+              setShowRatingModal(true);
+            }
+          }
+        }
+      } catch (error) {
+        // Silently ignore polling errors
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [rawId, currentStatus]);
   const date = (params.date as string) || 'N/A';
   const fileType = (params.fileType as string) || 'pdf';
   const pickupCode = (params.pickupCode as string) || '------';
   const rawId = params.rawId as string;
-  const { setActiveOrder } = useOrderStore();
+  const { clearCurrentOrder } = useOrderStore();
   const [showRatingModal, setShowRatingModal] = React.useState(false);
   const [ratingScore, setRatingScore] = React.useState(0);
   const [submittingRating, setSubmittingRating] = React.useState(false);
@@ -57,7 +81,7 @@ export default function OrderDetailsScreen() {
     }
   };
 
-  const badgeStyle = getStatusBadgeStyle(status);
+  const badgeStyle = getStatusBadgeStyle(currentStatus);
 
   const handleConfirmPickup = () => {
     Alert.alert(
@@ -72,10 +96,10 @@ export default function OrderDetailsScreen() {
               if (rawId) {
                 await api.put(`/orders/${rawId}`, { status: 'Collected' });
               }
-              setActiveOrder(null);
+              clearCurrentOrder();
               setShowRatingModal(true);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to update order status.');
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to update order status.');
             }
           }
         }
@@ -172,7 +196,7 @@ export default function OrderDetailsScreen() {
         {/* Status Section */}
         <View style={styles.statusSection}>
           <View style={[styles.statusBadge, { backgroundColor: badgeStyle.bg }]}>
-            <Text style={[styles.statusText, { color: badgeStyle.text }]}>{status}</Text>
+            <Text style={[styles.statusText, { color: badgeStyle.text }]}>{currentStatus}</Text>
           </View>
           <Text style={styles.orderNumber}>{orderId}</Text>
           <Text style={styles.orderPlacedText}>Ordered on {date}</Text>
@@ -219,7 +243,7 @@ export default function OrderDetailsScreen() {
         </View>
 
         {/* Pickup Code Section — always visible after order is placed */}
-        {status !== 'Cancelled' && (
+        {currentStatus !== 'Cancelled' && (
           <View style={styles.pickupCard}>
             <Text style={styles.pickupTitle}>Your Pickup Code</Text>
             <View style={styles.codeRow}>
@@ -230,16 +254,16 @@ export default function OrderDetailsScreen() {
               ))}
             </View>
             <Text style={styles.pickupHelper}>
-              {status === 'Ready'
+              {currentStatus === 'Ready'
                 ? 'Your prints are ready! Show this code at the shop to collect.'
-                : status === 'Collected'
+                : currentStatus === 'Collected'
                 ? 'Order completed. Keep this code for your records.'
                 : 'Save this code — you\'ll need it to collect your prints when ready.'}
             </Text>
           </View>
         )}
 
-        {status === 'Ready' && (
+        {currentStatus === 'Ready' && (
           <TouchableOpacity onPress={handleConfirmPickup} style={{ marginTop: 8, marginBottom: 16, backgroundColor: '#10B981', paddingVertical: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#10B981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 2 }}>
             <Text style={{ color: '#ffffff', fontFamily: 'Poppins-Bold', fontSize: 15 }}>I have taken this order</Text>
           </TouchableOpacity>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Download, ChevronLeft, ChevronRight, MoreVertical, FileText, Book, Copy, ChevronsUpDown, Image } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import styles from './Orders.module.css';
 
 // We will fetch orders from the backend instead of using MOCK_ORDERS
@@ -10,7 +12,20 @@ export default function Orders() {
   const [activeTab, setActiveTab] = useState('All Orders');
   const [orders, setOrders] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const itemsPerPage = 10;
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchOrders();
@@ -67,6 +82,63 @@ export default function Orders() {
     return matchesTab && matchesSearch;
   });
 
+  useEffect(() => {
+    setSelectedOrders([]);
+  }, [activeTab, searchQuery]);
+
+  const handleExport = (format: 'csv' | 'pdf') => {
+    const targetOrders = selectedOrders.length > 0 
+      ? filteredOrders.filter(o => selectedOrders.includes(o.id))
+      : filteredOrders;
+
+    if (targetOrders.length === 0) {
+      alert('No data to export.');
+      return;
+    }
+
+    const headers = ['Order ID', 'Student', 'Document', 'Copies', 'Price', 'Status', 'Date', 'Time'];
+    const rows = targetOrders.map(o => [
+      o.id,
+      `${o.studentName} (${o.phone})`,
+      `${o.docName} (${o.pages} pages)`,
+      o.copies.toString(),
+      o.price,
+      o.status.toUpperCase(),
+      o.date,
+      o.time
+    ]);
+
+    const fileName = `PrintEase_Orders_${new Date().toISOString().split('T')[0]}`;
+
+    if (format === 'csv') {
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + [headers.join(','), ...rows.map(e => e.map(cell => `"${cell}"`).join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `${fileName}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (format === 'pdf') {
+      const doc = new jsPDF();
+      doc.text("PrintEase Orders Report", 14, 15);
+      doc.setFontSize(11);
+      doc.text(`Generated on ${new Date().toLocaleString()}`, 14, 22);
+      
+      autoTable(doc, {
+        head: [headers],
+        body: rows,
+        startY: 30,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 92, 230] } // Brand color #005CE6
+      });
+      
+      doc.save(`${fileName}.pdf`);
+    }
+  };
+
   return (
     <div className={styles.ordersPage}>
       <div className={styles.card}>
@@ -85,9 +157,17 @@ export default function Orders() {
             ))}
           </div>
           
-          <button className={styles.exportBtn} onClick={() => alert("Export functionality will generate a CSV or PDF later.")}>
-            <Download size={16} /> Export
-          </button>
+          <div className={styles.exportContainer} ref={exportMenuRef}>
+            <button className={styles.exportBtn} onClick={() => setShowExportMenu(!showExportMenu)}>
+              <Download size={16} /> Export
+            </button>
+            {showExportMenu && (
+              <div className={styles.exportMenu}>
+                <button onClick={() => { handleExport('csv'); setShowExportMenu(false); }}>Export as CSV</button>
+                <button onClick={() => { handleExport('pdf'); setShowExportMenu(false); }}>Export as PDF</button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Data Table */}
@@ -95,7 +175,18 @@ export default function Orders() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: '40px' }}><input type="checkbox" className={styles.checkbox} title="Select All" /></th>
+                <th style={{ width: '40px' }}>
+                  <input 
+                    type="checkbox" 
+                    className={styles.checkbox} 
+                    title="Select All" 
+                    checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedOrders(filteredOrders.map(o => o.id));
+                      else setSelectedOrders([]);
+                    }}
+                  />
+                </th>
                 <th>Order ID <ChevronsUpDown size={12} className={styles.sortIcon} /></th>
                 <th>Student <ChevronsUpDown size={12} className={styles.sortIcon} /></th>
                 <th>Document <ChevronsUpDown size={12} className={styles.sortIcon} /></th>
@@ -114,7 +205,17 @@ export default function Orders() {
               )}
               {filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((order, i) => (
                 <tr key={i}>
-                  <td><input type="checkbox" className={styles.checkbox} /></td>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      className={styles.checkbox} 
+                      checked={selectedOrders.includes(order.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedOrders([...selectedOrders, order.id]);
+                        else setSelectedOrders(selectedOrders.filter(id => id !== order.id));
+                      }}
+                    />
+                  </td>
                   <td className={styles.orderId}>{order.id}</td>
                   <td>
                     <div className={styles.studentInfo}>

@@ -88,7 +88,7 @@ export default function ShopDetailsScreen() {
   };
 
   const handleChooseShop = () => {
-    if (getShopStatus(shop) === 'Closed') {
+    if (getShopStatus(shop).includes('Closed')) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Animated.sequence([
         Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
@@ -157,9 +157,12 @@ export default function ShopDetailsScreen() {
       }
     }
 
-    if (!shopData?.operating_hours || shopData.operating_hours === '{}') return 'Open';
+    let hoursString = shopData?.operating_hours;
+    if (!hoursString || hoursString === '{}') {
+      hoursString = '{"Monday":{"active":true,"open":"08:00","close":"17:00"},"Tuesday":{"active":true,"open":"08:00","close":"17:00"},"Wednesday":{"active":true,"open":"08:00","close":"17:00"},"Thursday":{"active":true,"open":"08:00","close":"17:00"},"Friday":{"active":true,"open":"08:00","close":"17:00"},"Saturday":{"active":false,"open":"09:00","close":"14:00"},"Sunday":{"active":false,"open":"10:00","close":"14:00"}}';
+    }
     try {
-      const hours = JSON.parse(shopData.operating_hours);
+      const hours = JSON.parse(hoursString);
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const today = days[new Date().getDay()];
       const todayHours = hours[today];
@@ -266,7 +269,7 @@ export default function ShopDetailsScreen() {
             </TouchableOpacity>
 
             <Text style={styles.shopStatus}>
-              <Text style={getShopStatus(shop) === 'Closed' ? styles.closedText : styles.openText}>
+              <Text style={getShopStatus(shop).includes('Closed') ? styles.closedText : styles.openText}>
                 {getShopStatus(shop)}
               </Text>
             </Text>
@@ -557,11 +560,12 @@ export default function ShopDetailsScreen() {
         <Animated.View style={{ transform: [{ translateX: shakeAnimation }] }}>
           <TouchableOpacity
             onPress={handleChooseShop}
-            style={[styles.chooseButton, getShopStatus(shop) === 'Closed' && { backgroundColor: '#9CA3AF' }]}
+            style={[styles.chooseButton, getShopStatus(shop).includes('Closed') && { backgroundColor: '#9CA3AF' }]}
+            disabled={getShopStatus(shop).includes('Closed')}
             activeOpacity={0.8}
           >
             <Text style={styles.chooseButtonText}>
-              {getShopStatus(shop) === 'Closed' ? 'Shop is Closed' : 'Choose This Shop'}
+              {getShopStatus(shop).includes('Closed') ? 'Shop is Closed' : 'Choose This Shop'}
             </Text>
           </TouchableOpacity>
         </Animated.View>

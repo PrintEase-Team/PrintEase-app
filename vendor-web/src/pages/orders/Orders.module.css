@@ -91,6 +91,44 @@
   background: #f8fafc;
 }
 
+.exportContainer {
+  position: relative;
+}
+
+.exportMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  z-index: 10;
+  min-width: 140px;
+}
+
+.exportMenu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exportMenu button:hover {
+  background: #f1f5f9;
+  color: #005CE6;
+}
+
 .tableWrapper {
   overflow-x: auto;
 }
