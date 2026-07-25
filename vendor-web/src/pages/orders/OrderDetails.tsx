@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Book, BookOpen, Calendar, CreditCard as CardIcon, Check, CheckCircle2, Clock, Copy, Download, FileCheck, FileText, Image, Layers, Maximize2, MoreHorizontal, Printer, Settings, ShieldCheck, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { User, FileText, Download, Check, Settings, Info, CreditCard, Play, FileCheck, CheckCircle2, XCircle, Copy, File, Printer, Image, Smartphone, HelpCircle, ArrowLeft, ChevronRight, Calendar, Clock, MoreHorizontal, ChevronLeft, Search, Maximize2, FileType, HardDrive, Hash, ShieldCheck, CreditCard as CardIcon, Book, BookOpen, Layers } from 'lucide-react';
 import styles from './OrderDetails.module.css';
 
 export default function OrderDetails() {
@@ -21,17 +21,17 @@ export default function OrderDetails() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
     })
-    .then(res => res.json())
-    .then(() => {
-      // Re-fetch the full order details to refresh the UI
-      return fetch(`http://localhost:8080/api/orders/${id}/full`)
-        .then(res => res.json())
-        .then(data => setOrder(data));
-    })
-    .catch(err => console.error('Error updating status:', err));
+      .then(res => res.json())
+      .then(() => {
+        // Re-fetch the full order details to refresh the UI
+        return fetch(`http://localhost:8080/api/orders/${id}/full`)
+          .then(res => res.json())
+          .then(data => setOrder(data));
+      })
+      .catch(err => console.error('Error updating status:', err));
   };
 
-  if (!order) return <div style={{padding: '50px', textAlign: 'center'}}>Loading...</div>;
+  if (!order) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading...</div>;
 
   return (
     <div className={styles.pageWrapper}>
@@ -39,7 +39,7 @@ export default function OrderDetails() {
       <div className={styles.customTopbar}>
         <div className={styles.topbarLeft}>
           <div className={styles.titleRow}>
-            <h1>Order #{order.order?.order_id?.substring(0,8).toUpperCase()}</h1>
+            <h1>Order #{order.order?.order_id?.substring(0, 8).toUpperCase()}</h1>
           </div>
           <div className={styles.metaRow}>
             <div className={styles.metaItem}>
@@ -60,12 +60,6 @@ export default function OrderDetails() {
           <button className={styles.backBtn} onClick={() => navigate('/dashboard/orders')}>
             <ArrowLeft size={16} /> Back to Orders
           </button>
-          <button className={styles.printBtnTop}>
-            <Printer size={16} /> Print
-          </button>
-          <button className={styles.iconBtn}>
-            <MoreHorizontal size={16} />
-          </button>
         </div>
       </div>
 
@@ -77,7 +71,7 @@ export default function OrderDetails() {
               <User className={styles.cardHeaderIcon} size={20} />
               Customer Information
             </div>
-            
+
             <div className={styles.infoBlock}>
               <span className={styles.infoLabel}>Student Name</span>
               <span className={styles.infoValue}>{order.student?.full_name || order.student?.name || 'Unknown'}</span>
@@ -96,14 +90,14 @@ export default function OrderDetails() {
             <div className={styles.infoBlock}>
               <span className={styles.infoLabel}>Pickup Method</span>
               <span className={styles.infoValue} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Clock size={14} color="#64748b"/> Shop Pickup
+                <Clock size={14} color="#64748b" /> Shop Pickup
               </span>
             </div>
 
             <div className={styles.infoBlock}>
               <span className={styles.infoLabel}>Payment Method</span>
               <span className={styles.infoValue} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CardIcon size={14} color="#64748b"/> Online (Paystack)
+                <CardIcon size={14} color="#64748b" /> Online (Paystack)
               </span>
             </div>
 
@@ -119,14 +113,14 @@ export default function OrderDetails() {
               <FileText className={styles.cardHeaderIcon} size={20} />
               Document Information
             </div>
-            
+
             <div className={styles.docInfoItem}>
               <div className={styles.docInfoIcon}>
                 <FileText size={24} color="#ef4444" />
               </div>
-              <div className={styles.infoBlock} style={{marginBottom: 0}}>
+              <div className={styles.infoBlock} style={{ marginBottom: 0 }}>
                 <span className={styles.infoLabel}>File Name</span>
-                <span className={styles.infoValue} style={{wordBreak: 'break-all'}}>{order.files?.[0]?.file_name || 'N/A'}</span>
+                <span className={styles.infoValue} style={{ wordBreak: 'break-all' }}>{order.files?.[0]?.file_name || 'N/A'}</span>
               </div>
             </div>
 
@@ -153,16 +147,16 @@ export default function OrderDetails() {
             <div className={styles.cardHeader}>
               Document Preview
             </div>
-            
+
             <div className={styles.previewWrapper}>
               <div className={styles.previewMain}>
                 <div className={styles.previewImage} style={{ padding: 0, overflow: 'hidden' }}>
                   {order.files && order.files.length > 0 ? (
                     order.files[0].file_type?.startsWith('image/') ? (
-                      <img 
-                        src={`http://localhost:8080/api/file/${order.files[0].file_id}/view`} 
-                        alt="Document Preview" 
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                      <img
+                        src={`http://localhost:8080/api/file/${order.files[0].file_id}/view`}
+                        alt="Document Preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
                     ) : (
                       <div className={styles.pdfPlaceholder}>
@@ -180,10 +174,10 @@ export default function OrderDetails() {
               </div>
             </div>
 
-            <button 
-              className={styles.downloadBtn} 
+            <button
+              className={styles.downloadBtn}
               onClick={() => {
-                if(order.files && order.files.length > 0) {
+                if (order.files && order.files.length > 0) {
                   window.open(`http://localhost:8080/api/file/${order.files[0].file_id}/view`, '_blank');
                 }
               }}
@@ -237,30 +231,30 @@ export default function OrderDetails() {
                 <Maximize2 className={styles.printSettingCardIcon} size={20} color="#8b5cf6" />
                 <div className={styles.printSettingCardText}>
                   <span>Orientation</span>
-                  <span style={{textTransform: 'capitalize'}}>{order.printSettings?.[0]?.orientation || 'Portrait'}</span>
+                  <span style={{ textTransform: 'capitalize' }}>{order.printSettings?.[0]?.orientation || 'Portrait'}</span>
                 </div>
               </div>
-              
+
               {order.printSettings?.[0]?.requires_binding && (
-                <div className={styles.printSettingCard} style={{borderColor: '#f59e0b', backgroundColor: '#fef3c7'}}>
+                <div className={styles.printSettingCard} style={{ borderColor: '#f59e0b', backgroundColor: '#fef3c7' }}>
                   <BookOpen className={styles.printSettingCardIcon} size={20} color="#d97706" />
                   <div className={styles.printSettingCardText}>
-                    <span style={{color: '#92400e'}}>Binding</span>
-                    <span style={{color: '#d97706', fontWeight: 600}}>Requested</span>
+                    <span style={{ color: '#92400e' }}>Binding</span>
+                    <span style={{ color: '#d97706', fontWeight: 600 }}>Requested</span>
                   </div>
                 </div>
               )}
 
               {order.printSettings?.[0]?.requires_lamination && (
-                <div className={styles.printSettingCard} style={{borderColor: '#10b981', backgroundColor: '#d1fae5'}}>
+                <div className={styles.printSettingCard} style={{ borderColor: '#10b981', backgroundColor: '#d1fae5' }}>
                   <Layers className={styles.printSettingCardIcon} size={20} color="#059669" />
                   <div className={styles.printSettingCardText}>
-                    <span style={{color: '#065f46'}}>Lamination</span>
-                    <span style={{color: '#059669', fontWeight: 600}}>Requested</span>
+                    <span style={{ color: '#065f46' }}>Lamination</span>
+                    <span style={{ color: '#059669', fontWeight: 600 }}>Requested</span>
                   </div>
                 </div>
               )}
-              </div>
+            </div>
           </div>
         </div>
 
@@ -310,19 +304,19 @@ export default function OrderDetails() {
                 <Printer size={18} /> Start Printing
               </button>
             )}
-            
+
             {order.order?.status === 'Printing' && (
               <button className={`${styles.actionBtn} ${styles.btnOutlineBlue}`} onClick={() => updateStatus('Ready')}>
                 <CheckCircle2 size={18} /> Mark Ready (Done Printing)
               </button>
             )}
-            
+
             {order.order?.status === 'Ready' && (
               <button className={`${styles.actionBtn} ${styles.btnOutlineGreen}`} onClick={() => updateStatus('Collected')}>
                 <ShieldCheck size={18} /> Complete Order (Student Collected)
               </button>
             )}
-            
+
             {order.order?.status === 'Collected' && (
               <div style={{ padding: '16px', backgroundColor: '#f0fdf4', color: '#166534', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 500, border: '1px solid #bbf7d0' }}>
                 <CheckCircle2 size={18} /> Order Fully Completed
