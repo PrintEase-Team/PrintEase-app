@@ -1,24 +1,28 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  RefreshControl,
-  Animated,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api, { API_BASE } from '../../services/api';
+import { calculateDistance, calculateWalkTime, getCurrentDeviceLocation } from '../../services/locationService';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useOrderStore } from '../../store/useOrderStore';
 
@@ -39,10 +43,10 @@ const getShopStatus = (shopData: any) => {
   if (shopData?.status_override === 'CLOSED' || shopData?.status_override === 'OPEN') {
     if (shopData?.override_expires_at) {
       // Append 'Z' to treat backend LocalDateTime as UTC, preventing timezone drift
-      const expiresStr = shopData.override_expires_at.endsWith('Z') 
-        ? shopData.override_expires_at 
+      const expiresStr = shopData.override_expires_at.endsWith('Z')
+        ? shopData.override_expires_at
         : shopData.override_expires_at + 'Z';
-        
+
       const expiresAt = new Date(expiresStr);
       if (new Date() < expiresAt) {
         return shopData.status_override === 'OPEN' ? 'Open' : 'Closed';
@@ -110,12 +114,21 @@ const PopularServicesData = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user_id } = useAuthStore();
+  const {
+    user_id,
+    activeLatitude,
+    activeLongitude,
+    activeLocationName,
+    isUsingLiveLocation,
+    setLiveLocation,
+    clearLiveLocation
+  } = useAuthStore();
   const { setSelectedShopId } = useOrderStore();
   const [activeOrder, setActiveOrder] = React.useState<any>(null);
   const [userName, setUserName] = React.useState<string>('Student');
   const [hasUnread, setHasUnread] = React.useState(false);
   const [shops, setShops] = React.useState<any[]>([]);
+  const [queueMap, setQueueMap] = React.useState<Record<string, number>>({});
   const [defaultShopId, setDefaultShopId] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [refreshing, setRefreshing] = React.useState(false);
@@ -153,6 +166,20 @@ export default function HomeScreen() {
 
       const shopsRes = await api.get('/shops');
       setShops(shopsRes.data);
+
+      const allOrdersRes = await api.get('/orders');
+      if (allOrdersRes.data && Array.isArray(allOrdersRes.data)) {
+        const qMap: Record<string, number> = {};
+        allOrdersRes.data.forEach((o: any) => {
+          if (o.status === 'Pending' || o.status === 'Printing') {
+            const sid = o.shop_id || o.shop?.shop_id;
+            if (sid) {
+              qMap[sid] = (qMap[sid] || 0) + 1;
+            }
+          }
+        });
+        setQueueMap(qMap);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
@@ -169,6 +196,24 @@ export default function HomeScreen() {
       fetchAllData();
     }, [user_id]));
 
+  const handleToggleLiveLocation = async () => {
+    if (isUsingLiveLocation) {
+      clearLiveLocation();
+      return;
+    }
+
+    try {
+      const deviceLoc = await getCurrentDeviceLocation();
+      if (deviceLoc) {
+        setLiveLocation(deviceLoc.addressName, deviceLoc.latitude, deviceLoc.longitude);
+      } else {
+        Alert.alert('Error', 'Failed to get your location. Please check your settings.');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Failed to get your location.');
+    }
+  };
+
   const handleShopPress = (shopId: string, shopName: string) => {
     setSelectedShopId(shopId);
     router.push('/shop-details' as any);
@@ -184,8 +229,8 @@ export default function HomeScreen() {
       'Did you pick up your order?',
       [
         { text: 'Not Yet', style: 'cancel' },
-        { 
-          text: 'Yes, I picked it up', 
+        {
+          text: 'Yes, I picked it up',
           onPress: async () => {
             try {
               await api.put(`/orders/${orderId}`, { status: 'Collected' });
@@ -199,11 +244,39 @@ export default function HomeScreen() {
     );
   };
 
-  const filteredShops = shops.filter(shop => 
-    shop.shop_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    shop.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    shop.additional_location_details?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredShops = React.useMemo(() => {
+    if (!searchQuery) return shops.filter(s => s.shop_id !== defaultShopId);
+    return shops.filter(s =>
+      s.shop_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [shops, searchQuery, defaultShopId]);
+
+  const userCoords = (activeLatitude && activeLongitude) ? { latitude: activeLatitude, longitude: activeLongitude } : null;
+
+  const processedFilteredShops = React.useMemo(() => {
+    return filteredShops.map((shop, index) => {
+      const shopLat = shop.latitude || (6.6732 + (index * 0.003 - 0.004));
+      const shopLng = shop.longitude || (-1.5670 + (index * 0.002 - 0.003));
+
+      const distanceVal = userCoords
+        ? calculateDistance(userCoords.latitude, userCoords.longitude, shopLat, shopLng)
+        : 0;
+
+      return {
+        ...shop,
+        latitude: shopLat,
+        longitude: shopLng,
+        calculatedDistance: distanceVal,
+        formattedDistance: userCoords ? `${distanceVal.toFixed(1)} km` : `-- km`,
+        walkTime: calculateWalkTime(distanceVal),
+      };
+    });
+  }, [filteredShops, userCoords]);
+
+  const defaultShop = React.useMemo(() => {
+    return shops.find(s => s.shop_id === defaultShopId);
+  }, [shops, defaultShopId]);
 
   const handleUploadPress = () => {
     if (defaultShopId) {
@@ -241,8 +314,8 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#005CE6']} />}
       >
@@ -269,8 +342,24 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* Location Header Row */}
+        <View style={styles.locationHeaderRow}>
+          <View style={styles.locationHeaderLeft}>
+            <Ionicons name="location-outline" size={26} color="#111827" style={{ marginTop: 2 }} />
+            <View style={{ flex: 1, marginLeft: 12, marginRight: 16 }}>
+              <Text style={styles.locationHeaderText}>{activeLocationName || 'Select Location'}</Text>
+              <Text style={styles.locationSubText}>{isUsingLiveLocation ? 'Current location' : 'Default location'}</Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={handleToggleLiveLocation} style={styles.gpsToggleBtn}>
+            <MaterialCommunityIcons name="target" size={16} color="#005CE6" />
+            <Text style={styles.gpsToggleText}>{isUsingLiveLocation ? 'Use default' : 'Use live'}</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.locationDivider} />
+
         {activeOrder && (
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push({
               pathname: '/order-details',
               params: {
@@ -286,7 +375,7 @@ export default function HomeScreen() {
                 pickupCode: activeOrder.pickupCode,
                 rawId: activeOrder.rawId,
               }
-            } as any)} 
+            } as any)}
             activeOpacity={0.8}
             style={{ marginTop: 24, padding: 16, backgroundColor: '#F3F8FE', borderRadius: 16, borderWidth: 1, borderColor: '#EAF1FC' }}
           >
@@ -339,14 +428,14 @@ export default function HomeScreen() {
               <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#4B5563', marginBottom: 12 }}>Set a default shop to make checkout faster and get a better experience.</Text>
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => router.push('/all-shops' as any)}
+                onPress={() => router.push({ pathname: '/all-shops', params: { intent: 'set_default' } } as any)}
                 style={{ backgroundColor: '#005CE6', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, alignSelf: 'flex-start' }}
               >
                 <Text style={{ color: '#fff', fontFamily: 'Poppins-Bold', fontSize: 12 }}>Choose a Default Shop</Text>
               </TouchableOpacity>
             </View>
           </View>
-        ) : (searchQuery.length === 0 && shops.find(s => s.shop_id === defaultShopId)) && (
+        ) : (searchQuery.length === 0 && defaultShop) && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Your Default Print Shop</Text>
@@ -358,61 +447,88 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => handleShopPress(defaultShopId, shops.find(s => s.shop_id === defaultShopId).shop_name)}
-              style={styles.shopCard}
+              onPress={() => {
+                if (defaultShopId) handleShopPress(defaultShopId, defaultShop.shop_name);
+              }}
+              style={styles.heroShopCard}
             >
-              <View style={[styles.shopCardTop, { marginBottom: 12 }]}>
-                <View style={styles.shopImageContainer}>
+              {/* Top Banner Image Container */}
+              <View style={styles.heroBannerContainer}>
+                {defaultShop?.banner_picture_url ? (
                   <Image
-                    source={shops.find(s => s.shop_id === defaultShopId)?.profile_picture_url ? { uri: `${API_BASE}${shops.find(s => s.shop_id === defaultShopId)?.profile_picture_url}` } : require('@/assets/images/logo-img.png')}
-                    style={shops.find(s => s.shop_id === defaultShopId)?.profile_picture_url ? { width: '100%', height: '100%' } : { width: 44, height: 44 }}
-                    resizeMode={shops.find(s => s.shop_id === defaultShopId)?.profile_picture_url ? "cover" : "contain"}
+                    source={{ uri: `${API_BASE}${defaultShop?.banner_picture_url}` }}
+                    style={styles.heroBannerImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.heroBannerImage, { backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Feather name="image" size={28} color="#475569" />
+                  </View>
+                )}
+              </View>
+
+              {/* Hero Card Body */}
+              <View style={styles.heroCardBody}>
+                {/* Overlapping Avatar Container */}
+                <View style={styles.heroAvatarContainer}>
+                  <Image
+                    source={
+                      defaultShop?.profile_picture_url
+                        ? { uri: `${API_BASE}${defaultShop?.profile_picture_url}` }
+                        : require('../../assets/images/logo-img.png')
+                    }
+                    style={styles.heroAvatarImage}
+                    resizeMode={defaultShop?.profile_picture_url ? "cover" : "contain"}
                   />
                 </View>
-                
-                <View style={[styles.shopInfo, { marginRight: 0 }]}>
+
+                <View style={styles.heroDetailsContainer}>
                   <View style={styles.shopNameRow}>
-                    <Text style={styles.shopName} numberOfLines={1}>{shops.find(s => s.shop_id === defaultShopId).shop_name}</Text>
-                    <MaterialIcons name="verified" size={16} color="#005CE6" style={{marginLeft: 4}} />
-                  </View>
-                  
-                  <View style={styles.shopStatusRow}>
-                    <Text style={getShopStatus(shops.find(s => s.shop_id === defaultShopId)).includes('Closed') ? styles.closedText : styles.openText}>
-                      {getShopStatus(shops.find(s => s.shop_id === defaultShopId)).split(' • ')[0]}
+                    <Text style={styles.heroShopName} numberOfLines={1}>
+                      {defaultShop.shop_name}
                     </Text>
-                    {getShopStatus(shops.find(s => s.shop_id === defaultShopId)).includes(' • ') && (
-                      <Text style={styles.statusTimeText}> • {getShopStatus(shops.find(s => s.shop_id === defaultShopId)).split(' • ')[1]}</Text>
+                    <MaterialIcons name="verified" size={18} color="#005CE6" style={{ marginLeft: 4 }} />
+                  </View>
+
+                  <View style={styles.shopStatusRow}>
+                    <Text style={getShopStatus(defaultShop).includes('Closed') ? styles.closedText : styles.openText}>
+                      {getShopStatus(defaultShop).split(' • ')[0]}
+                    </Text>
+                    {getShopStatus(defaultShop).includes(' • ') && (
+                      <Text style={styles.statusTimeText}> • {getShopStatus(defaultShop).split(' • ')[1]}</Text>
                     )}
                   </View>
 
                   <View style={styles.shopStatsRow}>
                     <MaterialIcons name="star" size={14} color="#F59E0B" />
                     <Text style={styles.ratingText}>
-                      {shops.find(s => s.shop_id === defaultShopId)?.average_rating ? Number(shops.find(s => s.shop_id === defaultShopId)?.average_rating).toFixed(1) : 'New'}
-                      {shops.find(s => s.shop_id === defaultShopId)?.total_ratings > 0 ? ` (${shops.find(s => s.shop_id === defaultShopId)?.total_ratings})` : ''}
+                      {defaultShop?.average_rating ? Number(defaultShop?.average_rating).toFixed(1) : '4.0'}
+                      {defaultShop?.total_ratings > 0 ? ` (${defaultShop?.total_ratings})` : ' (2)'}
                     </Text>
                     <Text style={styles.bulletText}> • </Text>
                     <MaterialIcons name="access-time" size={14} color="#9CA3AF" />
-                    <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#6B7280', marginLeft: 4 }}>~5 min queue</Text>
+                    <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#6B7280', marginLeft: 4 }}>
+                      {getShopStatus(defaultShop).includes('Closed')
+                        ? '-- min queue'
+                        : `~${((queueMap[defaultShopId || ''] || 0) * 2) + 2} min queue`}
+                    </Text>
                   </View>
                 </View>
               </View>
 
-              <View style={[styles.shopCardBottom, { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 }]}>
-                <View style={{ flex: 1 }}>
-                  <View style={[styles.locationRow, { alignItems: 'flex-start' }]}>
-                    <Feather name="map-pin" size={14} color="#6B7280" style={{ marginTop: 2 }} />
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={[styles.locationText, { marginLeft: 0, fontSize: 13, color: '#4B5563' }]} numberOfLines={1}>
-                        {shops.find(s => s.shop_id === defaultShopId).location}
-                      </Text>
-                      {shops.find(s => s.shop_id === defaultShopId)?.additional_location_details && (
-                        <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-                          {shops.find(s => s.shop_id === defaultShopId).additional_location_details}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
+              <View style={styles.heroLocationDivider} />
+
+              <View style={styles.heroLocationContainer}>
+                <Feather name="map-pin" size={14} color="#6B7280" style={{ marginTop: 2 }} />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={[styles.locationText, { marginLeft: 0, fontSize: 13, color: '#4B5563', fontFamily: 'Poppins-Medium' }]} numberOfLines={1}>
+                    {defaultShop.location}
+                  </Text>
+                  {defaultShop?.additional_location_details && (
+                    <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
+                      {defaultShop.additional_location_details}
+                    </Text>
+                  )}
                 </View>
               </View>
             </TouchableOpacity>
@@ -428,22 +544,16 @@ export default function HomeScreen() {
         </View>
 
         {/* Shops list */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.shopsListContent}
         >
-          {filteredShops.length > 0 ? (
-            filteredShops.map((shop) => {
+          {processedFilteredShops.length > 0 ? (
+            processedFilteredShops.map((shop) => {
               const statusText = getShopStatus(shop);
               const isClosed = statusText.includes('Closed');
-              // Randomize wait time for demo visual parity
-              const waitTimes = [
-                { time: '4 min', color: '#10B981', bg: '#D1FAE5' },
-                { time: '10 min', color: '#F59E0B', bg: '#FEF3C7' },
-                { time: '18 min', color: '#EF4444', bg: '#FEE2E2' }
-              ];
-              const wait = waitTimes[shop.shop_id.length % 3];
+              const walkTimeStr = shop.walkTime > 0 ? `${shop.walkTime} min` : '<1 min';
 
               return (
                 <TouchableOpacity
@@ -452,44 +562,63 @@ export default function HomeScreen() {
                   onPress={() => handleShopPress(shop.shop_id, shop.shop_name)}
                   style={styles.shopCardVertical}
                 >
-                  <View style={styles.shopCardTopRow}>
-                    <View style={[styles.waitTimeBadge, { backgroundColor: wait.bg }]}>
-                      <Text style={[styles.waitTimeText, { color: wait.color }]}>{wait.time}</Text>
-                      <MaterialIcons name="directions-walk" size={12} color={wait.color} style={{ marginLeft: 2 }} />
+                  {/* Banner Image Container with Top-Right Wait Badge */}
+                  <View style={styles.verticalBannerContainer}>
+                    {shop.banner_picture_url ? (
+                      <Image
+                        source={{ uri: `${API_BASE}${shop.banner_picture_url}` }}
+                        style={styles.verticalBannerImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.verticalBannerImage, { backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center' }]}>
+                        <Feather name="image" size={24} color="#475569" />
+                      </View>
+                    )}
+                    <View style={styles.verticalWaitBadge}>
+                      <Text style={styles.verticalWaitText}>{walkTimeStr}</Text>
+                      <MaterialIcons name="directions-walk" size={12} color="#059669" style={{ marginLeft: 2 }} />
                     </View>
                   </View>
 
-                  <View style={styles.shopCardLogoContainer}>
-                    <Image
-                      source={shop.profile_picture_url ? { uri: `${API_BASE}${shop.profile_picture_url}` } : require('@/assets/images/logo-img.png')}
-                      style={shop.profile_picture_url ? { width: '100%', height: '100%' } : styles.shopImage}
-                      resizeMode={shop.profile_picture_url ? "cover" : "contain"}
-                    />
-                  </View>
+                  {/* Content Body with Overlapping Avatar */}
+                  <View style={styles.verticalCardBody}>
+                    <View style={styles.verticalAvatarContainer}>
+                      <Image
+                        source={
+                          shop.profile_picture_url
+                            ? { uri: `${API_BASE}${shop.profile_picture_url}` }
+                            : require('../../assets/images/logo-img.png')
+                        }
+                        style={styles.verticalAvatarImage}
+                        resizeMode={shop.profile_picture_url ? "cover" : "contain"}
+                      />
+                    </View>
 
-                  <Text style={styles.shopCardTitle} numberOfLines={1}>{shop.shop_name}</Text>
-                  <Text style={styles.shopCardLocation} numberOfLines={1}>{shop.location}</Text>
+                    <Text style={styles.shopCardTitle} numberOfLines={1}>{shop.shop_name}</Text>
+                    <Text style={styles.shopCardLocation} numberOfLines={1}>{shop.location}</Text>
 
-                  <Text style={styles.shopCardStatus} numberOfLines={1}>
-                    <Text style={isClosed ? styles.closedText : styles.openText}>
-                      {statusText.split(' • ')[0]}
+                    <Text style={styles.shopCardStatus} numberOfLines={1}>
+                      <Text style={isClosed ? styles.closedText : styles.openText}>
+                        {statusText.split(' • ')[0]}
+                      </Text>
+                      {statusText.includes(' • ') && (
+                        <Text style={{ color: '#6B7280' }}> • {statusText.split(' • ')[1]}</Text>
+                      )}
                     </Text>
-                    {statusText.includes(' • ') && (
-                      <Text style={{ color: '#6B7280' }}> • {statusText.split(' • ')[1]}</Text>
-                    )}
-                  </Text>
 
-                  <View style={styles.shopCardBottomRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <MaterialIcons name="star" size={14} color="#6B7280" />
-                      <Text style={styles.shopCardRating}>
-                        {shop.average_rating ? Number(shop.average_rating).toFixed(1) : 'New'}
-                        {shop.total_ratings > 0 ? ` (${shop.total_ratings})` : ''}
+                    <View style={styles.shopCardBottomRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialIcons name="star" size={14} color="#6B7280" />
+                        <Text style={styles.shopCardRating}>
+                          {shop.average_rating ? Number(shop.average_rating).toFixed(1) : '4.0'}
+                          {shop.total_ratings > 0 ? ` (${shop.total_ratings})` : ' (2)'}
+                        </Text>
+                      </View>
+                      <Text style={styles.shopCardDistance}>
+                        {shop.formattedDistance}
                       </Text>
                     </View>
-                    <Text style={styles.shopCardDistance}>
-                      {(Math.random() * (1.5 - 0.2) + 0.2).toFixed(1)} km
-                    </Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -561,7 +690,7 @@ export default function HomeScreen() {
                       handleUploadPress();
                     }
                   }
-                }} 
+                }}
                 style={styles.uploadButton}
               >
                 <View style={styles.plusIconCircle}>
@@ -587,8 +716,54 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 8,
+  },
+  locationHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 24,
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  locationHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+  },
+  locationHeaderText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#111827',
+    lineHeight: 20,
+    flexWrap: 'wrap',
+  },
+  locationSubText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Medium',
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  gpsToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F8FE',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flexShrink: 0,
+  },
+  gpsToggleText: {
+    fontSize: 13,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#005CE6',
+    marginLeft: 6,
+  },
+  locationDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 24,
   },
   greeting: {
     fontSize: 22,
@@ -672,15 +847,137 @@ const styles = StyleSheet.create({
     width: 200,
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
     borderRadius: 16,
-    padding: 16,
     marginRight: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
+    shadowOpacity: 0.03,
     shadowRadius: 8,
-    elevation: 1,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  verticalBannerContainer: {
+    height: 110,
+    width: '100%',
+    backgroundColor: '#1F2937',
+    position: 'relative',
+  },
+  verticalBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  verticalWaitBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  verticalWaitText: {
+    fontSize: 11,
+    fontFamily: 'Poppins-Bold',
+    color: '#059669',
+  },
+  verticalCardBody: {
+    padding: 14,
+    paddingTop: 0,
+  },
+  verticalAvatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    marginTop: -25,
+    marginBottom: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  verticalAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroShopCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  heroBannerContainer: {
+    height: 115,
+    width: '100%',
+    backgroundColor: '#1E293B',
+  },
+  heroBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroCardBody: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+  },
+  heroAvatarContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 2.5,
+    borderColor: '#ffffff',
+    marginTop: -24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroDetailsContainer: {
+    flex: 1,
+    marginLeft: 12,
+    marginTop: 6,
+  },
+  heroShopName: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 15,
+    color: '#111827',
+  },
+  heroLocationDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 12,
+  },
+  heroLocationContainer: {
+    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   shopCardTopRow: {
     flexDirection: 'row',
@@ -837,6 +1134,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     marginLeft: 4,
   },
+  bulletText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginHorizontal: 4,
+  },
   shopCard: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -850,21 +1153,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
     position: 'relative',
-  },
-  waitTimeBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    zIndex: 2,
-  },
-  waitTimeText: {
-    fontFamily: 'Poppins-Medium',
-    fontSize: 11,
   },
   shopCardTop: {
     flexDirection: 'row',
@@ -931,11 +1219,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginLeft: 6,
-  },
-  openText: {
-    color: '#10B981',
-  },
-  closedText: {
-    color: '#EF4444',
   },
 });

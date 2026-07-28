@@ -13,6 +13,7 @@ export interface FileResponse {
   file_type: string;
   file_path: string;
   file_size: number;
+  page_count: number;
 }
 
 export const fileService = {

@@ -6,6 +6,10 @@ export interface PrintSettingsRequest {
   color_mode: 'Black_and_White' | 'Colored';
   sided: 'Double_sided' | 'Single_sided';
   page_range: string;
+  paper_size?: string;
+  orientation?: string;
+  requires_binding?: boolean;
+  requires_lamination?: boolean;
 }
 
 export interface PrintSettingsResponse extends PrintSettingsRequest {

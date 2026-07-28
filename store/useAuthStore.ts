@@ -11,14 +11,23 @@ interface AuthState {
   defaultLongitude: number | null;
   isLoading: boolean;
   error: string | null;
+  
+  // Unified Location State
+  isUsingLiveLocation: boolean;
+  activeLocationName: string | null;
+  activeLatitude: number | null;
+  activeLongitude: number | null;
+
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (details: RegisterDetails) => Promise<void>;
   setDefaultLocation: (name: string, lat: number, lng: number) => void;
+  setLiveLocation: (name: string, lat: number, lng: number) => void;
+  clearLiveLocation: () => void;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user_id: null,
   defaultLocationName: null,
@@ -26,6 +35,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   defaultLongitude: null,
   isLoading: false,
   error: null,
+  
+  isUsingLiveLocation: false,
+  activeLocationName: null,
+  activeLatitude: null,
+  activeLongitude: null,
 
   login: async (credentials: LoginCredentials) => {
     set({ isLoading: true, error: null });
@@ -99,10 +113,36 @@ export const useAuthStore = create<AuthState>((set) => ({
     await AsyncStorage.setItem('defaultLocationName', name);
     await AsyncStorage.setItem('defaultLatitude', String(lat));
     await AsyncStorage.setItem('defaultLongitude', String(lng));
+    const state = get();
     set({
       defaultLocationName: name,
       defaultLatitude: lat,
-      defaultLongitude: lng
+      defaultLongitude: lng,
+      // Update active if not using live location
+      ...(!state.isUsingLiveLocation && {
+        activeLocationName: name,
+        activeLatitude: lat,
+        activeLongitude: lng
+      })
+    });
+  },
+
+  setLiveLocation: (name: string, lat: number, lng: number) => {
+    set({
+      isUsingLiveLocation: true,
+      activeLocationName: name,
+      activeLatitude: lat,
+      activeLongitude: lng
+    });
+  },
+
+  clearLiveLocation: () => {
+    const state = get();
+    set({
+      isUsingLiveLocation: false,
+      activeLocationName: state.defaultLocationName,
+      activeLatitude: state.defaultLatitude,
+      activeLongitude: state.defaultLongitude
     });
   },
 
@@ -135,6 +175,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         defaultLocationName: defaultLocationName || null,
         defaultLatitude: defaultLatitude ? parseFloat(defaultLatitude) : null,
         defaultLongitude: defaultLongitude ? parseFloat(defaultLongitude) : null,
+        activeLocationName: defaultLocationName || null,
+        activeLatitude: defaultLatitude ? parseFloat(defaultLatitude) : null,
+        activeLongitude: defaultLongitude ? parseFloat(defaultLongitude) : null,
+        isUsingLiveLocation: false
       });
     }
   }

@@ -28,6 +28,8 @@ interface Order {
   status: 'Active' | 'Printing' | 'Ready' | 'Completed' | 'Cancelled';
   date: string;
   fileType: 'pdf' | 'word';
+  rawId?: number | string;
+  pickupCode?: string;
 }
 
 // Removed mockOrders
@@ -143,75 +145,89 @@ export default function OrdersScreen() {
     } as any);
   };
 
-  // Renders the progress timeline line & nodes
+  // Renders the progress timeline line & nodes with gaps
   const renderTimeline = (order: Order) => {
     const status = order.status;
-    let progressPercent = '0%';
-    let nodes = [
-      { label: 'Placed', state: 'pending', color: '#D1D5DB', sub: 'Pending' },
-      { label: 'Queued', state: 'pending', color: '#D1D5DB', sub: 'Pending' },
-      { label: 'Printing', state: 'pending', color: '#D1D5DB', sub: 'Pending' },
-      { label: 'Ready', state: 'pending', color: '#D1D5DB', sub: 'Pending' }
-    ];
+    if (status === 'Cancelled') return null;
 
-    const blue = '#005CE6';
-    const dateStr = order.date.split(',')[0] + ', ' + order.date.split(',')[1].trim();
-
+    let activeStepIndex = 0; // 0: Placed, 1: Queued, 2: Printing, 3: Ready
     if (status === 'Active') {
-      progressPercent = '25%';
-      nodes[0] = { label: 'Placed', state: 'completed', color: blue, sub: dateStr };
-      nodes[1] = { label: 'Queued', state: 'current', color: blue, sub: 'In progress' };
+      activeStepIndex = 1; // Queued
     } else if (status === 'Printing') {
-      progressPercent = '50%';
-      nodes[0] = { label: 'Placed', state: 'completed', color: blue, sub: dateStr };
-      nodes[1] = { label: 'Queued', state: 'completed', color: blue, sub: dateStr };
-      nodes[2] = { label: 'Printing', state: 'current', color: '#F97316', sub: 'In progress' }; // Orange
-    } else if (status === 'Ready') {
-      progressPercent = '76%';
-      nodes[0] = { label: 'Placed', state: 'completed', color: blue, sub: dateStr };
-      nodes[1] = { label: 'Queued', state: 'completed', color: blue, sub: dateStr };
-      nodes[2] = { label: 'Printing', state: 'completed', color: blue, sub: dateStr };
-      nodes[3] = { label: 'Ready', state: 'current', color: '#10B981', sub: 'Ready' }; // Green
-    } else if (status === 'Completed') {
-      progressPercent = '76%';
-      nodes[0] = { label: 'Placed', state: 'completed', color: blue, sub: dateStr };
-      nodes[1] = { label: 'Queued', state: 'completed', color: blue, sub: dateStr };
-      nodes[2] = { label: 'Printing', state: 'completed', color: blue, sub: dateStr };
-      nodes[3] = { label: 'Ready', state: 'completed', color: blue, sub: dateStr };
+      activeStepIndex = 2; // Printing
+    } else if (status === 'Ready' || status === 'Completed') {
+      activeStepIndex = 3; // Ready
     }
 
-    if (status === 'Cancelled') {
-      return null;
-    }
+    const steps = ['Placed', 'Queued', 'Printing', 'Ready'];
+    const dateStr = order.date ? order.date.split(',')[0] : 'N/A';
+
+    const getSubText = (index: number, label: string) => {
+      if (index < activeStepIndex) {
+        return index === 0 ? dateStr : 'Done';
+      } else if (index === activeStepIndex) {
+        if (label === 'Placed') return dateStr;
+        if (label === 'Ready') return 'Ready';
+        return 'In progress';
+      } else {
+        return 'Pending';
+      }
+    };
 
     return (
       <View style={styles.timelineContainer}>
-        <View style={styles.timelineLineBg} />
-        <View style={[styles.timelineLineActive, { width: progressPercent as any }]} />
         <View style={styles.nodesRow}>
-          {nodes.map((n, i) => (
-            <View key={i} style={styles.nodeItem}>
-              {n.state === 'completed' ? (
-                <View style={[styles.nodeCircle, { backgroundColor: n.color }]}>
-                  <Ionicons name="checkmark-sharp" size={12} color="#ffffff" />
-                </View>
-              ) : n.state === 'current' ? (
-                <View style={[styles.nodeCircle, { backgroundColor: n.color }]}>
-                  {n.label === 'Printing' ? (
-                    <Ionicons name="print" size={11} color="#ffffff" />
-                  ) : n.label === 'Ready' ? (
-                    <Ionicons name="checkmark-sharp" size={12} color="#ffffff" />
+          {steps.map((label, index) => {
+            const isCompleted = index < activeStepIndex;
+            const isCurrent = index === activeStepIndex;
+            const isDoneOrCurrent = index <= activeStepIndex;
+            const isLineActive = index < activeStepIndex;
+            const subText = getSubText(index, label);
+
+            return (
+              <React.Fragment key={label}>
+                <View style={styles.nodeItem}>
+                  {isDoneOrCurrent ? (
+                    <View style={styles.nodeCircleBlue}>
+                      <Ionicons name="checkmark" size={13} color="#ffffff" />
+                    </View>
                   ) : (
-                    <Ionicons name="checkmark-sharp" size={12} color="#ffffff" />
+                    <View style={styles.nodeCircleEmpty} />
                   )}
+                  <Text
+                    style={[
+                      styles.nodeLabel,
+                      isCurrent
+                        ? styles.nodeLabelCurrent
+                        : isCompleted
+                        ? styles.nodeLabelCompleted
+                        : styles.nodeLabelUpcoming,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.nodeSubLabel,
+                      isCurrent && { color: '#005CE6', fontFamily: 'Poppins-Medium' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {subText}
+                  </Text>
                 </View>
-              ) : (
-                <View style={styles.nodeCircleEmpty} />
-              )}
-              <Text style={[styles.nodeLabel, n.state === 'current' ? { color: '#111827', fontFamily: 'Poppins-Bold' } : {}]}>{n.label}</Text>
-              <Text style={[styles.nodeSubLabel, n.state === 'current' ? { color: n.color } : {}]}>{n.sub}</Text>
-            </View>
-          ))}
+
+                {index < steps.length - 1 && (
+                  <View
+                    style={[
+                      styles.segmentLine,
+                      { backgroundColor: isLineActive ? '#005CE6' : '#E2E8F0' },
+                    ]}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
         </View>
       </View>
     );
@@ -528,74 +544,67 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   timelineContainer: {
-    height: 52,
-    position: 'relative',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  timelineLineBg: {
-    position: 'absolute',
-    left: '12%',
-    right: '12%',
-    height: 2,
-    backgroundColor: '#E5E7EB',
-    top: 11,
-  },
-  timelineLineActive: {
-    position: 'absolute',
-    left: '12%',
-    height: 2,
-    backgroundColor: '#005CE6',
-    top: 11,
+    marginTop: 6,
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
   nodesRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     width: '100%',
   },
   nodeItem: {
-    width: '24%',
     alignItems: 'center',
+    width: 54,
   },
-  nodeCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+  segmentLine: {
+    flex: 1,
+    height: 2,
+    marginTop: 9,
+    marginHorizontal: -2,
+    borderRadius: 1,
+  },
+  nodeCircleBlue: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#005CE6',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
   },
-  nodeCircleBlue: {
-    backgroundColor: '#005CE6',
-  },
-  nodeCircleOrange: {
-    backgroundColor: '#F97316',
-  },
-  nodeCircleGreen: {
-    backgroundColor: '#10B981',
-  },
   nodeCircleEmpty: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     backgroundColor: '#ffffff',
     zIndex: 2,
   },
   nodeLabel: {
-    fontSize: 11,
-    fontFamily: 'Poppins-Medium',
-    color: '#6B7280',
+    fontSize: 12,
     marginTop: 6,
     textAlign: 'center',
   },
+  nodeLabelCurrent: {
+    fontFamily: 'Poppins-Bold',
+    color: '#005CE6',
+  },
+  nodeLabelCompleted: {
+    fontFamily: 'Poppins-Medium',
+    color: '#475569',
+  },
+  nodeLabelUpcoming: {
+    fontFamily: 'Poppins-Regular',
+    color: '#94A3B8',
+  },
   nodeSubLabel: {
     fontSize: 9,
-    fontFamily: 'Poppins-Medium',
-    color: '#9CA3AF',
+    fontFamily: 'Poppins-Regular',
+    color: '#94A3B8',
     marginTop: 2,
     textAlign: 'center',
-    width: 60,
   },
 });

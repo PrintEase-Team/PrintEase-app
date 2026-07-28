@@ -36,6 +36,15 @@ export const calculateDistance = (
 };
 
 /**
+ * Calculates the estimated walking time in minutes based on distance in kilometers.
+ * Standard walking speed is ~5 km/h, which is 12 minutes per kilometer.
+ */
+export const calculateWalkTime = (distanceInKm: number): number => {
+  if (distanceInKm <= 0) return 0;
+  return Math.ceil(distanceInKm * 12);
+};
+
+/**
  * Queries the Photon Geocoding API for real Ghana location suggestions.
  */
 export const searchGhanaLocations = async (query: string): Promise<LocationSearchResult[]> => {

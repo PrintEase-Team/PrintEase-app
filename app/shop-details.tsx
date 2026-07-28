@@ -1,36 +1,82 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Animated,
   Image,
+  Linking,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
-  Switch,
-  Linking,
-  Platform,
-  Animated,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useOrderStore } from '../store/useOrderStore';
 import api, { API_BASE } from '../services/api';
+import { calculateDistance } from '../services/locationService';
+import { useOrderStore } from '../store/useOrderStore';
 
 export default function ShopDetailsScreen() {
   const router = useRouter();
+  const { intent } = useLocalSearchParams<{ intent?: string }>();
   const { selectedShopId } = useOrderStore();
-  const { user_id } = useAuthStore();
+  const { user_id, activeLatitude, activeLongitude } = useAuthStore();
   const [shop, setShop] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDefault, setIsDefault] = useState(false);
+  const [queueTime, setQueueTime] = useState<number>(4); // default fallback
   const shakeAnimation = React.useRef(new Animated.Value(0)).current;
+
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const [defaultShopY, setDefaultShopY] = useState(0);
+  const highlightAnim = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (intent === 'set_default' && !isLoading && defaultShopY > 0) {
+      setTimeout(() => {
+        let startY = 0;
+        let targetY = defaultShopY - 100;
+        let duration = 1200; // significantly slower smooth scroll
+        let startTime = Date.now();
+        
+        const animateScroll = () => {
+          let now = Date.now();
+          let progress = Math.min((now - startTime) / duration, 1);
+          // EaseInOutCubic for a very smooth start and stop
+          let easeProgress = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+          
+          let currentY = startY + (targetY - startY) * easeProgress;
+          scrollViewRef.current?.scrollTo({ y: currentY, animated: false });
+          
+          if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+          } else {
+            Animated.sequence([
+              Animated.timing(highlightAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
+              Animated.timing(highlightAnim, { toValue: 0, duration: 400, useNativeDriver: false }),
+              Animated.timing(highlightAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
+              Animated.timing(highlightAnim, { toValue: 0, duration: 400, useNativeDriver: false })
+            ]).start();
+          }
+        };
+        
+        requestAnimationFrame(animateScroll);
+      }, 500); // initial delay before scroll starts
+    }
+  }, [intent, isLoading, defaultShopY]);
+
+  const animatedBorderColor = highlightAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#EAF1FC', '#005CE6']
+  });
 
   useEffect(() => {
     const fetchShop = async () => {
@@ -42,6 +88,19 @@ export default function ShopDetailsScreen() {
         console.error("Failed to fetch shop:", err);
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const fetchQueueTime = async () => {
+      if (!selectedShopId) return;
+      try {
+        const res = await api.get(`/orders/shop/${selectedShopId}`);
+        if (res.data && Array.isArray(res.data)) {
+          const activeCount = res.data.filter((o: any) => o.status === 'Pending' || o.status === 'Printing').length;
+          setQueueTime(activeCount * 2 + 2);
+        }
+      } catch (err) {
+        console.error("Failed to fetch queue time:", err);
       }
     };
 
@@ -58,6 +117,7 @@ export default function ShopDetailsScreen() {
     };
 
     fetchShop();
+    fetchQueueTime();
     fetchUserDetails();
   }, [selectedShopId, user_id]);
 
@@ -88,7 +148,7 @@ export default function ShopDetailsScreen() {
   };
 
   const handleChooseShop = () => {
-    if (getShopStatus(shop).includes('Closed')) {
+    if (getShopStatus(shop) === 'Closed') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Animated.sequence([
         Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
@@ -108,17 +168,17 @@ export default function ShopDetailsScreen() {
     }
     const label = encodeURIComponent(shop.shop_name || 'Print Shop');
     const latLng = `${shop.latitude},${shop.longitude}`;
-    
+
     // Create cross-platform Google Maps URL as fallback
     const browserUrl = `https://www.google.com/maps/search/?api=1&query=${latLng}`;
-    
+
     // Native app deep links
     const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
     const url = Platform.select({
       ios: `${scheme}${label}&ll=${latLng}`,
       android: `${scheme}${latLng}(${label})`
     });
-    
+
     if (url) {
       Linking.canOpenURL(url).then(supported => {
         if (Platform.OS === 'ios') {
@@ -144,10 +204,10 @@ export default function ShopDetailsScreen() {
     if (shopData?.status_override === 'CLOSED' || shopData?.status_override === 'OPEN') {
       if (shopData?.override_expires_at) {
         // Append 'Z' to treat backend LocalDateTime as UTC, preventing timezone drift
-        const expiresStr = shopData.override_expires_at.endsWith('Z') 
-          ? shopData.override_expires_at 
+        const expiresStr = shopData.override_expires_at.endsWith('Z')
+          ? shopData.override_expires_at
           : shopData.override_expires_at + 'Z';
-          
+
         const expiresAt = new Date(expiresStr);
         if (new Date() < expiresAt) {
           return shopData.status_override === 'OPEN' ? 'Open' : 'Closed';
@@ -230,11 +290,11 @@ export default function ShopDetailsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Banner Image (if available) */}
         {shop?.banner_picture_url && (
-          <Image 
-            source={{ uri: `${API_BASE}${shop.banner_picture_url}` }} 
+          <Image
+            source={{ uri: `${API_BASE}${shop.banner_picture_url}` }}
             style={{ width: '100%', height: 180, resizeMode: 'cover' }}
           />
         )}
@@ -253,7 +313,7 @@ export default function ShopDetailsScreen() {
           {/* Shop details column */}
           <View style={styles.shopInfoColumn}>
             <Text style={styles.shopName}>{shop?.shop_name || 'Loading...'}</Text>
-            
+
             <TouchableOpacity onPress={handleOpenMaps} style={{ marginTop: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="location" size={14} color="#005CE6" />
@@ -269,7 +329,7 @@ export default function ShopDetailsScreen() {
             </TouchableOpacity>
 
             <Text style={styles.shopStatus}>
-              <Text style={getShopStatus(shop).includes('Closed') ? styles.closedText : styles.openText}>
+              <Text style={getShopStatus(shop) === 'Closed' ? styles.closedText : styles.openText}>
                 {getShopStatus(shop)}
               </Text>
             </Text>
@@ -279,7 +339,7 @@ export default function ShopDetailsScreen() {
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={18} color="#005CE6" />
                 <Text style={styles.ratingText}>
-                  {shop?.average_rating ? Number(shop.average_rating).toFixed(1) : 'New'} 
+                  {shop?.average_rating ? Number(shop.average_rating).toFixed(1) : 'New'}
                   {shop?.total_ratings > 0 ? ` (${shop.total_ratings})` : ''}
                 </Text>
               </View>
@@ -296,7 +356,9 @@ export default function ShopDetailsScreen() {
         {/* Statistics Card */}
         <View style={styles.statsCard}>
           <View style={styles.statsColumn}>
-            <Text style={styles.statsVal}>4 min</Text>
+            <Text style={styles.statsVal}>
+              {getShopStatus(shop) === 'Closed' ? '--' : `${queueTime} min`}
+            </Text>
             <Text style={styles.statsLbl}>Est. Queue Time</Text>
           </View>
           <View style={styles.statsDivider} />
@@ -306,188 +368,14 @@ export default function ShopDetailsScreen() {
           </View>
           <View style={styles.statsDivider} />
           <View style={styles.statsColumn}>
-            <Text style={styles.statsVal}>1.2 km</Text>
+            <Text style={styles.statsVal}>
+              {shop && activeLatitude && activeLongitude ? (
+                `${calculateDistance(activeLatitude, activeLongitude, shop.latitude || 6.6732, shop.longitude || -1.5670).toFixed(1)} km`
+              ) : '-- km'}
+            </Text>
             <Text style={styles.statsLbl}>Distance</Text>
           </View>
         </View>
-
-        {/* Pricing Section */}
-        {shop && (shop.supports_a4 !== false || shop.supports_a3 !== false || shop.supports_letter !== false || shop.supports_lamination || shop.supports_binding) && (
-          <>
-            <Text style={styles.sectionTitle}>Pricing</Text>
-            <View style={styles.pricingContainer}>
-              {/* Printing Header */}
-              <View style={styles.pricingHeaderRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="print-outline" size={18} color="#005CE6" />
-                  <Text style={styles.pricingSectionTitle}>Printing</Text>
-                  <Text style={styles.pricingSubText}>(per page)</Text>
-                </View>
-              </View>
-
-              <View style={styles.pricingColumnsRow}>
-                <Text style={styles.pricingColumnHead}>Paper Size</Text>
-                <View style={styles.pricingTypeCols}>
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Text style={styles.pricingColumnHeadDark}>Black & White</Text>
-                    <Text style={styles.pricingSubText}>(per page)</Text>
-                  </View>
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Text style={styles.pricingColumnHeadDark}>Color</Text>
-                    <Text style={styles.pricingSubText}>(per page)</Text>
-                  </View>
-                </View>
-              </View>
-
-              {shop.supports_a4 !== false && (
-                <View style={styles.pricingRow}>
-                  <View style={{ width: 100 }}>
-                    <Text style={styles.pricingSize}>A4</Text>
-                    <Text style={styles.pricingSubText}>210 × 297 mm</Text>
-                  </View>
-                  <View style={styles.pricingValues}>
-                    <Text style={styles.pricingValText}>GH¢{(shop.price_a4_bw || 0.5).toFixed(2)}</Text>
-                    <View style={styles.pricingValRight}>
-                      <Text style={styles.pricingValText}>GH¢{(shop.price_a4_color || 1.0).toFixed(2)}</Text>
-                      <Feather name="chevron-right" size={16} color="#94a3b8" />
-                    </View>
-                  </View>
-                </View>
-              )}
-              {shop.supports_a3 !== false && (
-                <View style={styles.pricingRow}>
-                  <View style={{ width: 100 }}>
-                    <Text style={styles.pricingSize}>A3</Text>
-                    <Text style={styles.pricingSubText}>297 × 420 mm</Text>
-                  </View>
-                  <View style={styles.pricingValues}>
-                    <Text style={styles.pricingValText}>GH¢{(shop.price_a3_bw || 1.0).toFixed(2)}</Text>
-                    <View style={styles.pricingValRight}>
-                      <Text style={styles.pricingValText}>GH¢{(shop.price_a3_color || 2.0).toFixed(2)}</Text>
-                      <Feather name="chevron-right" size={16} color="#94a3b8" />
-                    </View>
-                  </View>
-                </View>
-              )}
-              {shop.supports_letter !== false && (
-                <View style={[styles.pricingRow, { borderBottomWidth: 0 }]}>
-                  <View style={{ width: 100 }}>
-                    <Text style={styles.pricingSize}>Letter</Text>
-                    <Text style={styles.pricingSubText}>8.5 × 11 in</Text>
-                  </View>
-                  <View style={styles.pricingValues}>
-                    <Text style={styles.pricingValText}>GH¢{(shop.price_letter_bw || 0.6).toFixed(2)}</Text>
-                    <View style={styles.pricingValRight}>
-                      <Text style={styles.pricingValText}>GH¢{(shop.price_letter_color || 1.2).toFixed(2)}</Text>
-                      <Feather name="chevron-right" size={16} color="#94a3b8" />
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Lamination Section */}
-              {shop.supports_lamination && (
-                <>
-                  <View style={styles.pricingHeaderRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Ionicons name="shield-checkmark-outline" size={18} color="#005CE6" />
-                      <Text style={styles.pricingSectionTitle}>Lamination</Text>
-                      <Text style={styles.pricingSubText}>(per sheet)</Text>
-                    </View>
-                  </View>
-                  <View style={styles.pricingColumnsRow}>
-                    <Text style={styles.pricingColumnHead}>Size</Text>
-                    <Text style={[styles.pricingColumnHeadDark, { textAlign: 'right', paddingRight: 32 }]}>Price</Text>
-                  </View>
-                  
-                  {shop.price_lamination_a4 != null && (
-                    <View style={styles.pricingRow}>
-                      <View style={{ width: 100 }}>
-                        <Text style={styles.pricingSize}>A4</Text>
-                        <Text style={styles.pricingSubText}>210 × 297 mm</Text>
-                      </View>
-                      <View style={styles.pricingValRight}>
-                        <Text style={styles.pricingValText}>GH¢{shop.price_lamination_a4.toFixed(2)}</Text>
-                        <Feather name="chevron-right" size={16} color="#94a3b8" />
-                      </View>
-                    </View>
-                  )}
-                  {shop.price_lamination_a3 != null && (
-                    <View style={styles.pricingRow}>
-                      <View style={{ width: 100 }}>
-                        <Text style={styles.pricingSize}>A3</Text>
-                        <Text style={styles.pricingSubText}>297 × 420 mm</Text>
-                      </View>
-                      <View style={styles.pricingValRight}>
-                        <Text style={styles.pricingValText}>GH¢{shop.price_lamination_a3.toFixed(2)}</Text>
-                        <Feather name="chevron-right" size={16} color="#94a3b8" />
-                      </View>
-                    </View>
-                  )}
-                  {shop.price_lamination_letter != null && (
-                    <View style={[styles.pricingRow, { borderBottomWidth: 0 }]}>
-                      <View style={{ width: 100 }}>
-                        <Text style={styles.pricingSize}>Letter</Text>
-                        <Text style={styles.pricingSubText}>8.5 × 11 in</Text>
-                      </View>
-                      <View style={styles.pricingValRight}>
-                        <Text style={styles.pricingValText}>GH¢{shop.price_lamination_letter.toFixed(2)}</Text>
-                        <Feather name="chevron-right" size={16} color="#94a3b8" />
-                      </View>
-                    </View>
-                  )}
-                </>
-              )}
-
-              {/* Binding Section */}
-              {shop.supports_binding && shop.binding_pricing && (
-                <>
-                  <View style={styles.pricingHeaderRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Ionicons name="book-outline" size={18} color="#005CE6" />
-                      <Text style={styles.pricingSectionTitle}>Binding</Text>
-                      <Text style={styles.pricingSubText}>(price by total sheets)</Text>
-                    </View>
-                  </View>
-                  <View style={styles.pricingColumnsRow}>
-                    <Text style={styles.pricingColumnHead}>Binding Type</Text>
-                    <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'space-between' }}>
-                      <Text style={styles.pricingColumnHeadDark}>Max Sheets</Text>
-                      <Text style={[styles.pricingColumnHeadDark, { paddingRight: 32 }]}>Price</Text>
-                    </View>
-                  </View>
-                  
-                  {(() => {
-                    try {
-                      const tiers = JSON.parse(shop.binding_pricing);
-                      return tiers.map((tier: any, index: number) => (
-                        <View key={index} style={[styles.pricingRow, index === tiers.length - 1 && { borderBottomWidth: 0 }]}>
-                          <View style={{ width: 100 }}>
-                            <Text style={styles.pricingSize}>Comb Binding</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text style={styles.pricingValText}>{tier.min} - {tier.max} <Text style={{ fontSize: 10, color: '#6B7280' }}>sheets</Text></Text>
-                            <View style={styles.pricingValRight}>
-                              <Text style={styles.pricingValText}>GH¢{tier.price.toFixed(2)}</Text>
-                              <Feather name="chevron-right" size={16} color="#94a3b8" />
-                            </View>
-                          </View>
-                        </View>
-                      ));
-                    } catch (e) {
-                      return null;
-                    }
-                  })()}
-                </>
-              )}
-
-              <View style={styles.pricingFooter}>
-                <Ionicons name="information-circle-outline" size={14} color="#6B7280" />
-                <Text style={styles.pricingFooterText}>All prices are per sheet (one side). Double-sided prices may vary.</Text>
-              </View>
-            </View>
-          </>
-        )}
 
         {/* Services Section */}
         {shop?.services_offered && (() => {
@@ -526,8 +414,201 @@ export default function ShopDetailsScreen() {
           }
         })()}
 
+        {/* Pricing Section */}
+        {shop && (shop.supports_a4 !== false || shop.supports_a3 !== false || shop.supports_letter !== false || shop.supports_lamination || shop.supports_binding) && (
+          <>
+            <Text style={styles.sectionTitle}>Pricing</Text>
+            
+            {/* Printing Card */}
+            {(shop.supports_a4 !== false || shop.supports_a3 !== false || shop.supports_letter !== false) && (
+              <View style={styles.pricingContainer}>
+                {/* Printing Header */}
+                <View style={styles.pricingHeaderRow}>
+                  <View style={styles.pricingIconContainer}>
+                    <Ionicons name="print-outline" size={18} color="#005CE6" />
+                  </View>
+                  <Text style={styles.pricingSectionTitle}>Printing</Text>
+                  <Text style={styles.pricingSubText}>(per page)</Text>
+                </View>
+
+                <View style={[styles.pricingColumnsRow, { backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, alignItems: 'center' }]}>
+                  <Text style={[styles.pricingColumnHeadDark, { width: 100 }]}>Size</Text>
+                  <View style={styles.pricingTypeCols}>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={styles.pricingColumnHeadDark}>Black & White</Text>
+                      <Text style={styles.pricingSubText}>(per page)</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={styles.pricingColumnHeadDark}>Color</Text>
+                      <Text style={styles.pricingSubText}>(per page)</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {shop.supports_a4 !== false && (
+                  <View style={styles.pricingRow}>
+                    <View style={{ width: 100 }}>
+                      <Text style={styles.pricingSize}>A4</Text>
+                      <Text style={styles.pricingSubText}>210 × 297 mm</Text>
+                    </View>
+                    <View style={styles.pricingValues}>
+                      <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.pricingSubText, { marginTop: 0, marginBottom: 2 }]}>B/W</Text>
+                        <Text style={styles.pricingValText}>GH¢{(shop.price_a4_bw || 0.5).toFixed(2)}</Text>
+                      </View>
+                      <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.pricingSubText, { marginTop: 0, marginBottom: 2 }]}>Color</Text>
+                        <Text style={[styles.pricingValText, { color: '#005CE6' }]}>GH¢{(shop.price_a4_color || 1.0).toFixed(2)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+                {shop.supports_a3 !== false && (
+                  <View style={styles.pricingRow}>
+                    <View style={{ width: 100 }}>
+                      <Text style={styles.pricingSize}>A3</Text>
+                      <Text style={styles.pricingSubText}>297 × 420 mm</Text>
+                    </View>
+                    <View style={styles.pricingValues}>
+                      <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.pricingSubText, { marginTop: 0, marginBottom: 2 }]}>B/W</Text>
+                        <Text style={styles.pricingValText}>GH¢{(shop.price_a3_bw || 1.0).toFixed(2)}</Text>
+                      </View>
+                      <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.pricingSubText, { marginTop: 0, marginBottom: 2 }]}>Color</Text>
+                        <Text style={[styles.pricingValText, { color: '#005CE6' }]}>GH¢{(shop.price_a3_color || 2.0).toFixed(2)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+                {shop.supports_letter !== false && (
+                  <View style={[styles.pricingRow, { borderBottomWidth: 0 }]}>
+                    <View style={{ width: 100 }}>
+                      <Text style={styles.pricingSize}>Letter</Text>
+                      <Text style={styles.pricingSubText}>8.5 × 11 in</Text>
+                    </View>
+                    <View style={styles.pricingValues}>
+                      <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.pricingSubText, { marginTop: 0, marginBottom: 2 }]}>B/W</Text>
+                        <Text style={styles.pricingValText}>GH¢{(shop.price_letter_bw || 0.6).toFixed(2)}</Text>
+                      </View>
+                      <View style={{ alignItems: 'center', flex: 1 }}>
+                        <Text style={[styles.pricingSubText, { marginTop: 0, marginBottom: 2 }]}>Color</Text>
+                        <Text style={[styles.pricingValText, { color: '#005CE6' }]}>GH¢{(shop.price_letter_color || 1.2).toFixed(2)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Lamination Card */}
+            {shop.supports_lamination && (
+              <View style={[styles.pricingContainer, { marginTop: 16 }]}>
+                <View style={[styles.pricingHeaderRow, { borderBottomWidth: 1, paddingBottom: 16 }]}>
+                  <View style={styles.pricingIconContainer}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color="#005CE6" />
+                  </View>
+                  <Text style={styles.pricingSectionTitle}>Lamination</Text>
+                  <Text style={styles.pricingSubText}>(per sheet)</Text>
+                </View>
+
+                {shop.price_lamination_a4 != null && (
+                  <View style={styles.pricingRow}>
+                    <View style={{ width: 100 }}>
+                      <Text style={styles.pricingSize}>A4</Text>
+                      <Text style={styles.pricingSubText}>210 × 297 mm</Text>
+                    </View>
+                    <View style={styles.pricingValRight}>
+                      <Text style={[styles.pricingValText, { color: '#005CE6' }]}>GH¢{shop.price_lamination_a4.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                )}
+                {shop.price_lamination_a3 != null && (
+                  <View style={styles.pricingRow}>
+                    <View style={{ width: 100 }}>
+                      <Text style={styles.pricingSize}>A3</Text>
+                      <Text style={styles.pricingSubText}>297 × 420 mm</Text>
+                    </View>
+                    <View style={styles.pricingValRight}>
+                      <Text style={[styles.pricingValText, { color: '#005CE6' }]}>GH¢{shop.price_lamination_a3.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                )}
+                {shop.price_lamination_letter != null && (
+                  <View style={[styles.pricingRow, { borderBottomWidth: 0 }]}>
+                    <View style={{ width: 100 }}>
+                      <Text style={styles.pricingSize}>Letter</Text>
+                      <Text style={styles.pricingSubText}>8.5 × 11 in</Text>
+                    </View>
+                    <View style={styles.pricingValRight}>
+                      <Text style={[styles.pricingValText, { color: '#005CE6' }]}>GH¢{shop.price_lamination_letter.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Binding Card */}
+            {shop.supports_binding && shop.binding_pricing && (
+              <View style={[styles.pricingContainer, { marginTop: 16 }]}>
+                <View style={styles.pricingHeaderRow}>
+                  <View style={styles.pricingIconContainer}>
+                    <Ionicons name="book-outline" size={18} color="#005CE6" />
+                  </View>
+                  <Text style={styles.pricingSectionTitle}>Binding</Text>
+                  <Text style={styles.pricingSubText}>(price by total sheets)</Text>
+                </View>
+                
+                <View style={[styles.pricingColumnsRow, { backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, alignItems: 'center' }]}>
+                  <Text style={[styles.pricingColumnHeadDark, { width: 100 }]}>Binding Type</Text>
+                  <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'space-between' }}>
+                    <Text style={styles.pricingColumnHeadDark}>Max Sheets</Text>
+                    <Text style={[styles.pricingColumnHeadDark, { paddingRight: 4 }]}>Price</Text>
+                  </View>
+                </View>
+
+                {(() => {
+                  try {
+                    const tiers = JSON.parse(shop.binding_pricing);
+                    return tiers.map((tier: any, index: number) => (
+                      <View key={index} style={[styles.pricingRow, index === tiers.length - 1 && { borderBottomWidth: 0 }]}>
+                        <View style={{ width: 100 }}>
+                          <Text style={styles.pricingSize}>Comb{'\n'}Binding</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', flex: 1, justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={[styles.pricingValText, { fontFamily: 'Poppins-Medium' }]}>{tier.min} - {tier.max} <Text style={{ fontSize: 10, color: '#6B7280' }}>sheets</Text></Text>
+                          <View style={styles.pricingValRight}>
+                            <Text style={[styles.pricingValText, { color: '#005CE6' }]}>GH¢{tier.price.toFixed(2)}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ));
+                  } catch (e) {
+                    return null;
+                  }
+                })()}
+              </View>
+            )}
+
+            <View style={[styles.pricingFooter, { marginHorizontal: 24 }]}>
+              <Ionicons name="information-circle-outline" size={16} color="#005CE6" />
+              <Text style={[styles.pricingFooterText, { color: '#475569' }]}>All prices are per sheet (one side). Double-sided prices may vary.</Text>
+            </View>
+          </>
+        )}
+
         {/* Default Shop Toggle Card */}
-        <View style={styles.defaultShopCard}>
+        <Animated.View 
+          onLayout={(e) => setDefaultShopY(e.nativeEvent.layout.y)}
+          style={[
+            styles.defaultShopCard, 
+            { 
+              borderColor: animatedBorderColor, 
+              borderWidth: highlightAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 2] }) 
+            }
+          ]}
+        >
           <View style={styles.defaultShopIconContainer}>
             <Ionicons name="star-outline" size={24} color="#005CE6" />
           </View>
@@ -543,7 +624,7 @@ export default function ShopDetailsScreen() {
             trackColor={{ false: '#D1D5DB', true: '#BFDBFE' }}
             thumbColor={isDefault ? '#005CE6' : '#FFFFFF'}
           />
-        </View>
+        </Animated.View>
 
         {/* Blue Student Trust Card */}
         <View style={styles.trustCard}>
@@ -560,12 +641,11 @@ export default function ShopDetailsScreen() {
         <Animated.View style={{ transform: [{ translateX: shakeAnimation }] }}>
           <TouchableOpacity
             onPress={handleChooseShop}
-            style={[styles.chooseButton, getShopStatus(shop).includes('Closed') && { backgroundColor: '#9CA3AF' }]}
-            disabled={getShopStatus(shop).includes('Closed')}
+            style={[styles.chooseButton, getShopStatus(shop) === 'Closed' && { backgroundColor: '#9CA3AF' }]}
             activeOpacity={0.8}
           >
             <Text style={styles.chooseButtonText}>
-              {getShopStatus(shop).includes('Closed') ? 'Shop is Closed' : 'Choose This Shop'}
+              {getShopStatus(shop) === 'Closed' ? 'Shop is Closed' : 'Choose This Shop'}
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -749,25 +829,33 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#111827',
   },
+  pricingIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   pricingHeaderRow: {
-    paddingTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     marginBottom: 12,
   },
   pricingSectionTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#1E293B',
-    marginLeft: 6,
+    marginLeft: 10,
   },
   pricingSubText: {
     fontSize: 11,
-    fontFamily: 'Poppins-Regular',
+    fontFamily: 'Poppins-Medium',
     color: '#94A3B8',
-    marginLeft: 4,
-    marginTop: 2,
+    marginLeft: 6,
   },
   pricingColumnsRow: {
     flexDirection: 'row',
@@ -807,15 +895,15 @@ const styles = StyleSheet.create({
   pricingFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#EFF6FF',
     padding: 12,
     borderRadius: 8,
     marginTop: 16,
   },
   pricingFooterText: {
     fontSize: 11,
-    fontFamily: 'Poppins-Regular',
-    color: '#64748B',
+    fontFamily: 'Poppins-Medium',
+    color: '#005CE6',
     marginLeft: 8,
     flex: 1,
   },

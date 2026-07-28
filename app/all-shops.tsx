@@ -21,6 +21,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import api, { API_BASE } from '../services/api';
 import {
   calculateDistance,
+  calculateWalkTime,
   getCurrentDeviceLocation,
   LocationSearchResult,
   searchGhanaLocations
@@ -89,28 +90,41 @@ const getShopStatus = (shopData: any) => {
 };
 
 const MOCK_LOCATIONS = [
-  { name: 'Ayeduase Gate', district: 'Ayeduase', target: { x: -60, y: -20, scale: 1.45 } },
-  { name: 'Ayeduase Park', district: 'Ayeduase', target: { x: -75, y: -40, scale: 1.5 } },
-  { name: 'KNUST Commercial Area', district: 'Commercial', target: { x: 25, y: 30, scale: 1.4 } },
-  { name: 'Brunei Complex', district: 'Brunei', target: { x: 55, y: -30, scale: 1.45 } },
-  { name: 'Unity Hall Campus', district: 'Unity', target: { x: -20, y: 55, scale: 1.4 } },
-  { name: 'Main Campus / PMB', district: 'Campus', target: { x: 0, y: 0, scale: 1.35 } },
-  { name: 'Kotei Location', district: 'Kotei', target: { x: 65, y: 40, scale: 1.45 } },
+  { name: 'Queens Hall', district: 'KNUST', target: { x: 60, y: 60, scale: 1.45 } },
+  { name: 'Paa Joe Stadium', district: 'KNUST', target: { x: 0, y: 60, scale: 1.5 } },
+  { name: 'KNUST Library Mall', district: 'KNUST', target: { x: -60, y: 60, scale: 1.4 } },
+  { name: 'Prempeh II Library', district: 'KNUST', target: { x: 60, y: 10, scale: 1.45 } },
+  { name: 'KNUST Great Hall', district: 'KNUST', target: { x: 60, y: -40, scale: 1.4 } },
+  { name: 'Blader Skates Ghana', district: 'KNUST', target: { x: 10, y: 10, scale: 1.45 } },
+  { name: 'CCB Auditorium', district: 'KNUST', target: { x: -50, y: 10, scale: 1.4 } },
+  { name: 'School of Medical Sciences', district: 'KNUST', target: { x: 0, y: -60, scale: 1.45 } },
+  { name: 'Faculty of Pharmacy', district: 'KNUST', target: { x: -60, y: -40, scale: 1.45 } },
 ];
 
 export default function AllShopsScreen() {
   const router = useRouter();
-  const { search } = useLocalSearchParams<{ search?: string }>();
+  const { search, intent } = useLocalSearchParams<{ search?: string, intent?: string }>();
   const { setSelectedShopId } = useOrderStore();
 
   const [shops, setShops] = useState<any[]>([]);
+  const [queueMap, setQueueMap] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { defaultLocationName, defaultLatitude, defaultLongitude } = useAuthStore();
+  const {
+    defaultLocationName,
+    defaultLatitude,
+    defaultLongitude,
+    activeLocationName,
+    activeLatitude,
+    activeLongitude,
+    isUsingLiveLocation,
+    setLiveLocation,
+    clearLiveLocation
+  } = useAuthStore();
 
-  const initialSearch = search || defaultLocationName || '';
-  const initialSelected = search ? null : defaultLocationName;
-  const initialCoords = (defaultLatitude && defaultLongitude && !search) ? { latitude: defaultLatitude, longitude: defaultLongitude } : null;
+  const initialSearch = search || activeLocationName || defaultLocationName || '';
+  const initialSelected = search ? null : (activeLocationName || defaultLocationName);
+  const initialCoords = (activeLatitude && activeLongitude && !search) ? { latitude: activeLatitude, longitude: activeLongitude } : null;
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [showSuggestions, setShowSuggestions] = useState(!!search);
@@ -121,30 +135,19 @@ export default function AllShopsScreen() {
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(initialCoords);
   const [showOpenOnly, setShowOpenOnly] = useState(false);
-  const [isUsingLiveLocation, setIsUsingLiveLocation] = useState(false);
-  
+
+  // Sync local coords when global active coords change (e.g. from homescreen)
   useEffect(() => {
-    const initLocation = async () => {
-      if (!search) {
-        setIsSearchingLocation(true);
-        const deviceLoc = await getCurrentDeviceLocation();
-        if (deviceLoc) {
-          setUserCoords({ latitude: deviceLoc.latitude, longitude: deviceLoc.longitude });
-          setSelectedLocation('My Location');
-          setSearchQuery('My Location');
-          setIsUsingLiveLocation(true);
-        } else if (defaultLatitude && defaultLongitude) {
-          setUserCoords({ latitude: defaultLatitude, longitude: defaultLongitude });
-          setSelectedLocation(defaultLocationName || null);
-          setSearchQuery(defaultLocationName || '');
-        } else {
-          setUserCoords(null);
-        }
-        setIsSearchingLocation(false);
+    if (!search) {
+      if (activeLatitude && activeLongitude) {
+        setUserCoords({ latitude: activeLatitude, longitude: activeLongitude });
+        setSelectedLocation(activeLocationName);
+        setSearchQuery(activeLocationName || '');
+      } else {
+        setUserCoords(null);
       }
-    };
-    initLocation();
-  }, [search]);
+    }
+  }, [activeLatitude, activeLongitude, activeLocationName, search]);
 
   // Animated Map Values
   const mapScale = useRef(new Animated.Value(1)).current;
@@ -189,8 +192,8 @@ export default function AllShopsScreen() {
         ).map(l => ({
           name: l.name,
           district: l.district,
-          latitude: 6.6732 + (l.target.x * 0.0001),
-          longitude: -1.5670 + (l.target.y * 0.0001),
+          latitude: 6.6732 - (l.target.y * 0.0001),
+          longitude: -1.5670 + (l.target.x * 0.0001),
         }));
 
         const combined = [...apiResults, ...campusMatches];
@@ -211,16 +214,8 @@ export default function AllShopsScreen() {
 
   const revertToDefaultLocation = () => {
     setSelectedPinIndex(null);
-    setSearchQuery(defaultLocationName || '');
-    setSelectedLocation(defaultLocationName || null);
     setShowSuggestions(false);
-    setIsUsingLiveLocation(false);
-
-    if (defaultLatitude && defaultLongitude) {
-      setUserCoords({ latitude: defaultLatitude, longitude: defaultLongitude });
-    } else {
-      setUserCoords(null);
-    }
+    clearLiveLocation();
 
     Animated.parallel([
       Animated.timing(mapScale, { toValue: 1, duration: 450, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
@@ -231,32 +226,20 @@ export default function AllShopsScreen() {
 
   const handleUseMyLocation = async () => {
     if (isUsingLiveLocation) {
-      // Toggle off: revert to default location
       return revertToDefaultLocation();
     }
 
     setSelectedPinIndex(null);
     setIsSearchingLocation(true);
-    setIsUsingLiveLocation(true);
     let deviceLoc = await getCurrentDeviceLocation();
-
-    if (!deviceLoc && defaultLocationName && defaultLatitude && defaultLongitude) {
-      // Fallback to default location from profile if GPS is off/denied
-      deviceLoc = {
-        latitude: defaultLatitude,
-        longitude: defaultLongitude,
-        addressName: defaultLocationName,
-      };
-    }
 
     setIsSearchingLocation(false);
 
     if (deviceLoc) {
-      setUserCoords({ latitude: deviceLoc.latitude, longitude: deviceLoc.longitude });
-      setSelectedLocation(deviceLoc.addressName);
-      setSearchQuery(deviceLoc.addressName);
+      setLiveLocation(deviceLoc.addressName, deviceLoc.latitude, deviceLoc.longitude);
       setShowSuggestions(false);
     } else {
+      // Fallback
       setSelectedLocation('My Location');
     }
 
@@ -277,7 +260,7 @@ export default function AllShopsScreen() {
     setSelectedPinIndex(null);
     setSearchQuery('');
     setShowSuggestions(false);
-    setIsUsingLiveLocation(false);
+    clearLiveLocation();
 
     // We intentionally DO NOT clear userCoords or selectedLocation here.
     // This ensures that the distance calculations don't randomly jump to the 
@@ -293,10 +276,10 @@ export default function AllShopsScreen() {
   const handleFocusShopOnMap = (index: number) => {
     setSelectedPinIndex(index);
     const positions = [
-      { x: 70, y: 25 },
-      { x: 25, y: -35 },
-      { x: -45, y: 15 },
-      { x: 10, y: 55 }
+      { x: 120, y: 80 },    // For top: '35%', left: '20%'
+      { x: 80, y: -80 },    // For top: '65%', left: '30%'
+      { x: 20, y: 50 },     // For top: '40%', left: '45%'
+      { x: -100, y: -30 }   // For top: '55%', left: '75%'
     ];
     const target = positions[index % positions.length];
     Animated.parallel([
@@ -312,17 +295,17 @@ export default function AllShopsScreen() {
     setUserCoords({ latitude: loc.latitude, longitude: loc.longitude });
     setShowSuggestions(false);
     setSelectedPinIndex(null);
-    setIsUsingLiveLocation(false);
+    clearLiveLocation();
 
-    const latOffset = (loc.latitude - 6.6732) * 4000;
-    const lngOffset = (loc.longitude - (-1.5670)) * 4000;
-    const clampedX = Math.max(-90, Math.min(90, lngOffset));
-    const clampedY = Math.max(-90, Math.min(90, -latOffset));
+    const latOffset = (loc.latitude - 6.6732) * 10000;
+    const lngOffset = (loc.longitude - (-1.5670)) * 10000;
+    const clampedX = Math.max(-120, Math.min(120, lngOffset));
+    const clampedY = Math.max(-120, Math.min(120, -latOffset));
 
     Animated.parallel([
-      Animated.timing(mapScale, { toValue: 1.5, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(mapTranslateX, { toValue: clampedX, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(mapTranslateY, { toValue: clampedY, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(mapScale, { toValue: 1.45, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(mapTranslateX, { toValue: clampedX, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(mapTranslateY, { toValue: clampedY, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
   };
 
@@ -352,8 +335,22 @@ export default function AllShopsScreen() {
     try {
       const res = await api.get('/shops');
       setShops(res.data);
+
+      const allOrdersRes = await api.get('/orders');
+      if (allOrdersRes.data && Array.isArray(allOrdersRes.data)) {
+        const qMap: Record<string, number> = {};
+        allOrdersRes.data.forEach((o: any) => {
+          if (o.status === 'Pending' || o.status === 'Printing') {
+            const sid = o.shop_id || o.shop?.shop_id;
+            if (sid) {
+              qMap[sid] = (qMap[sid] || 0) + 1;
+            }
+          }
+        });
+        setQueueMap(qMap);
+      }
     } catch (err) {
-      console.error("Failed to fetch shops:", err);
+      console.error("Failed to fetch shops/orders:", err);
     }
   };
 
@@ -371,7 +368,11 @@ export default function AllShopsScreen() {
 
   const handleShopPress = (shopId: string) => {
     setSelectedShopId(shopId);
-    router.push('/shop-details' as any);
+    if (intent) {
+      router.push({ pathname: '/shop-details', params: { intent } } as any);
+    } else {
+      router.push('/shop-details' as any);
+    }
   };
 
   // Map shops with calculated distance
@@ -380,11 +381,14 @@ export default function AllShopsScreen() {
     // so that mathematical distance can still be correctly computed.
     const shopLat = shop.latitude || (6.6732 + (index * 0.003 - 0.004));
     const shopLng = shop.longitude || (-1.5670 + (index * 0.002 - 0.003));
-    
+
     // ALWAYS calculate correct distance mathematically! No mock fallbacks.
     const distanceVal = userCoords
       ? calculateDistance(userCoords.latitude, userCoords.longitude, shopLat, shopLng)
       : 0;
+
+    const queueTime = ((queueMap[shop.shop_id] || 0) * 2) + 2;
+    const walkTime = calculateWalkTime(distanceVal);
 
     return {
       ...shop,
@@ -392,6 +396,8 @@ export default function AllShopsScreen() {
       longitude: shopLng,
       calculatedDistance: distanceVal,
       formattedDistance: userCoords ? `${distanceVal.toFixed(1)} km` : `-- km`,
+      queueTime,
+      walkTime,
     };
   });
 
@@ -456,7 +462,7 @@ export default function AllShopsScreen() {
               <TouchableOpacity onPress={() => {
                 setSearchQuery('');
                 setShowSuggestions(false);
-                setIsUsingLiveLocation(false);
+                clearLiveLocation();
                 setSelectedLocation(null);
                 setUserCoords(null);
                 handleResetMap();
@@ -540,38 +546,11 @@ export default function AllShopsScreen() {
               ]
             }
           ]}>
-            {/* Base Parks & River */}
-            <View style={styles.mockPark} />
-            <View style={[styles.mockPark, { top: '60%', left: '70%', width: 220, height: 180, backgroundColor: '#DCFCE7' }]} />
-            <View style={[styles.mockStreet, { top: '50%', left: '-10%', width: '120%', height: 16, backgroundColor: '#BAE6FD', transform: [{ rotate: '12deg' }] }]} />
-
-            {/* Primary Avenues & Highways */}
-            <View style={[styles.mockStreet, { top: '35%', height: 12, width: '150%', transform: [{ rotate: '-15deg' }] }]} />
-            <View style={[styles.mockStreet, { left: '42%', width: 12, height: '150%', transform: [{ rotate: '25deg' }] }]} />
-            <View style={[styles.mockStreet, { left: '68%', width: 14, height: '150%', transform: [{ rotate: '-5deg' }] }]} />
-
-            {/* Faded Detail Layer (Reveals finer streets & buildings when zoomed in) */}
-            <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: detailOpacity }]}>
-              {/* Secondary Streets & Alleys */}
-              <View style={[styles.mockStreet, { top: '20%', height: 4, width: '100%', backgroundColor: '#FFFFFF', opacity: 0.8, transform: [{ rotate: '10deg' }] }]} />
-              <View style={[styles.mockStreet, { top: '55%', height: 4, width: '100%', backgroundColor: '#FFFFFF', opacity: 0.8, transform: [{ rotate: '-30deg' }] }]} />
-              <View style={[styles.mockStreet, { left: '25%', width: 4, height: '100%', backgroundColor: '#FFFFFF', opacity: 0.8, transform: [{ rotate: '-10deg' }] }]} />
-              <View style={[styles.mockStreet, { left: '55%', width: 4, height: '100%', backgroundColor: '#FFFFFF', opacity: 0.8, transform: [{ rotate: '15deg' }] }]} />
-
-              {/* Building Blocks / Department Structures */}
-              <View style={{ position: 'absolute', top: '28%', left: '28%', width: 40, height: 30, backgroundColor: '#CBD5E1', borderRadius: 4 }} />
-              <View style={{ position: 'absolute', top: '40%', left: '18%', width: 50, height: 35, backgroundColor: '#CBD5E1', borderRadius: 4 }} />
-              <View style={{ position: 'absolute', top: '60%', left: '38%', width: 45, height: 40, backgroundColor: '#CBD5E1', borderRadius: 4 }} />
-              <View style={{ position: 'absolute', top: '32%', left: '55%', width: 35, height: 45, backgroundColor: '#CBD5E1', borderRadius: 4 }} />
-              <View style={{ position: 'absolute', top: '48%', left: '72%', width: 60, height: 30, backgroundColor: '#CBD5E1', borderRadius: 4 }} />
-
-              <Text style={[styles.mockMapLabel1, { top: '26%', left: '30%', fontSize: 8, color: '#64748B' }]}>Library Block B</Text>
-              <Text style={[styles.mockMapLabel1, { top: '62%', left: '40%', fontSize: 8, color: '#64748B' }]}>Engineering Annex</Text>
-            </Animated.View>
-
-            <Text style={styles.mockMapLabel1}>KNUST{'\n'}Commercial Area</Text>
-            <Text style={styles.mockMapLabel2}>Baba Yara{'\n'}Sports Stadium</Text>
-            <Text style={styles.mockMapLabel3}>University{'\n'}Main Campus</Text>
+            <Image 
+              source={require('../assets/images/map-bg.png')}  
+              style={{ width: '100%', height: '100%', position: 'absolute' }}
+              resizeMode="cover"
+            />
 
             {/* Dynamic Shop Markers */}
             {filteredShops.slice(0, 4).map((shop, idx) => {
@@ -580,7 +559,7 @@ export default function AllShopsScreen() {
                 { top: '65%', left: '30%' },
                 { top: '40%', left: '45%' },
                 { top: '55%', left: '75%' }
-              ][idx % 4];
+              ][idx % 4] as any;
 
               const isSelected = selectedPinIndex === idx;
 
@@ -644,14 +623,7 @@ export default function AllShopsScreen() {
               filteredShops.map((shop, index) => {
                 const statusText = getShopStatus(shop);
                 const isOpenNow = statusText.includes('Open Now');
-
-                const waitTimes = [
-                  { time: '4 min', color: '#005CE6', bg: '#EFF6FF' },
-                  { time: '6 min', color: '#005CE6', bg: '#EFF6FF' },
-                  { time: '8 min', color: '#005CE6', bg: '#EFF6FF' },
-                  { time: '9 min', color: '#005CE6', bg: '#EFF6FF' }
-                ];
-                const wait = waitTimes[index % waitTimes.length];
+                const walkTimeStr = shop.walkTime > 0 ? `${shop.walkTime} min` : '<1 min';
 
                 return (
                   <TouchableOpacity
@@ -661,23 +633,41 @@ export default function AllShopsScreen() {
                       handleFocusShopOnMap(index);
                       handleShopPress(shop.shop_id);
                     }}
-                    style={[
-                      styles.shopCard,
-                      selectedPinIndex === index && { borderColor: '#005CE6', borderWidth: 1.5 }
-                    ]}
+                    style={styles.shopCard}
                   >
-                    <View style={[styles.shopCardTop, { marginBottom: 10 }]}>
-                      <View style={styles.shopImageContainer}>
+                    {/* Storefront Banner Image */}
+                    <View style={styles.shopBannerContainer}>
+                      {shop.banner_picture_url ? (
                         <Image
-                          source={shop.profile_picture_url ? { uri: `${API_BASE}${shop.profile_picture_url}` } : require('@/assets/images/logo-img.png')}
-                          style={shop.profile_picture_url ? { width: '100%', height: '100%' } : { width: 36, height: 36 }}
+                          source={{ uri: `${API_BASE}${shop.banner_picture_url}` }}
+                          style={styles.shopBannerImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.shopBannerImage, { backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center' }]}>
+                          <Feather name="image" size={24} color="#475569" />
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Card Body with Overlapping Avatar */}
+                    <View style={styles.shopCardBody}>
+                      <View style={styles.shopAvatarContainer}>
+                        <Image
+                          source={
+                            shop.profile_picture_url
+                              ? { uri: `${API_BASE}${shop.profile_picture_url}` }
+                              : require('../assets/images/logo-img.png')
+                          }
+                          style={styles.shopAvatarImage}
                           resizeMode={shop.profile_picture_url ? "cover" : "contain"}
                         />
                       </View>
 
-                      <View style={[styles.shopInfo, { marginRight: 0 }]}>
+                      <View style={styles.shopInfo}>
                         <View style={styles.shopNameRow}>
                           <Text style={styles.shopName} numberOfLines={1}>{shop.shop_name}</Text>
+                          <MaterialIcons name="verified" size={16} color="#005CE6" style={{ marginLeft: 4 }} />
                         </View>
 
                         <View style={styles.shopStatusRow}>
@@ -692,8 +682,8 @@ export default function AllShopsScreen() {
                         <View style={styles.shopStatsRow}>
                           <MaterialIcons name="star" size={12} color="#F59E0B" />
                           <Text style={styles.ratingText}>
-                            {shop.average_rating ? Number(shop.average_rating).toFixed(1) : 'New'}
-                            {shop.total_ratings > 0 ? ` (${shop.total_ratings})` : ''}
+                            {shop.average_rating ? Number(shop.average_rating).toFixed(1) : '4.0'}
+                            {shop.total_ratings > 0 ? ` (${shop.total_ratings})` : ' (2)'}
                           </Text>
                           <Text style={styles.bulletText}> • </Text>
                           <Feather name="navigation" size={11} color="#005CE6" />
@@ -702,17 +692,24 @@ export default function AllShopsScreen() {
                           </Text>
                           <Text style={styles.bulletText}> • </Text>
                           <MaterialIcons name="access-time" size={12} color="#9CA3AF" />
-                          <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 11, color: '#6B7280', marginLeft: 4 }}>~{wait.time}</Text>
+                          <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 11, color: '#6B7280', marginLeft: 4 }}>
+                            {isOpenNow ? `~${shop.queueTime} min` : '-- min'}
+                          </Text>
+                          <Text style={styles.bulletText}> • </Text>
+                          <MaterialIcons name="directions-walk" size={12} color="#9CA3AF" />
+                          <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 11, color: '#6B7280', marginLeft: 4 }}>
+                            {walkTimeStr}
+                          </Text>
                         </View>
                       </View>
                     </View>
 
-                    <View style={[styles.shopCardBottom, { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 10 }]}>
+                    <View style={[styles.shopCardBottom, { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 10, paddingHorizontal: 12, paddingBottom: 12 }]}>
                       <View style={{ flex: 1 }}>
                         <View style={[styles.locationRow, { alignItems: 'flex-start' }]}>
                           <Feather name="map-pin" size={12} color="#6B7280" style={{ marginTop: 2 }} />
                           <View style={{ flex: 1, marginLeft: 6 }}>
-                            <Text style={[styles.locationText, { marginLeft: 0, fontSize: 12, color: '#4B5563' }]} numberOfLines={1}>
+                            <Text style={[styles.locationText, { marginLeft: 0, fontSize: 12, color: '#4B5563', fontFamily: 'Poppins-Medium' }]} numberOfLines={1}>
                               {shop.location}
                             </Text>
                             {shop.additional_location_details && (
@@ -840,47 +837,6 @@ const styles = StyleSheet.create({
     left: '-80%',
     backgroundColor: '#EAEFE9',
   },
-  mockStreet: {
-    position: 'absolute',
-    backgroundColor: '#ffffff',
-  },
-  mockPark: {
-    position: 'absolute',
-    top: -20,
-    left: 20,
-    width: 150,
-    height: 120,
-    backgroundColor: '#D1FAE5',
-    borderRadius: 60,
-    opacity: 0.7,
-  },
-  mockMapLabel1: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    fontFamily: 'Poppins-Medium',
-    fontSize: 10,
-    color: '#4B5563',
-    textAlign: 'center',
-  },
-  mockMapLabel2: {
-    position: 'absolute',
-    top: 20,
-    left: 40,
-    fontFamily: 'Poppins-Medium',
-    fontSize: 10,
-    color: '#10B981',
-    textAlign: 'center',
-  },
-  mockMapLabel3: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    fontFamily: 'Poppins-Medium',
-    fontSize: 10,
-    color: '#4B5563',
-    textAlign: 'center',
-  },
   mapMarkerAbsolute: {
     position: 'absolute',
     justifyContent: 'center',
@@ -967,29 +923,55 @@ const styles = StyleSheet.create({
   shopCard: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    marginBottom: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+    overflow: 'hidden',
   },
-  shopCardTop: {
+  shopBannerContainer: {
+    height: 115,
+    width: '100%',
+    backgroundColor: '#1F2937',
+  },
+  shopBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  shopCardBody: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
   },
-  shopImageContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#111827',
+  shopAvatarContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 2.5,
+    borderColor: '#ffffff',
+    marginTop: -24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+  },
+  shopAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   shopInfo: {
     flex: 1,
     marginLeft: 12,
-    marginRight: 8,
+    marginTop: 6,
   },
   shopNameRow: {
     flexDirection: 'row',

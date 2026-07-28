@@ -27,6 +27,10 @@ export default function OrderDetailsScreen() {
   const pagesInfo = (params.pagesInfo as string) || 'Loading...';
   const price = (params.price as string) || 'GHS --';
   const initialStatus = (params.status as string) || 'Active';
+  const rawId = params.rawId as string;
+  const date = (params.date as string) || 'N/A';
+  const fileType = (params.fileType as string) || 'pdf';
+  const pickupCode = (params.pickupCode as string) || '------';
   const [currentStatus, setCurrentStatus] = React.useState(initialStatus);
 
   React.useEffect(() => {
@@ -51,10 +55,6 @@ export default function OrderDetailsScreen() {
 
     return () => clearInterval(interval);
   }, [rawId, currentStatus]);
-  const date = (params.date as string) || 'N/A';
-  const fileType = (params.fileType as string) || 'pdf';
-  const pickupCode = (params.pickupCode as string) || '------';
-  const rawId = params.rawId as string;
   const { clearCurrentOrder } = useOrderStore();
   const [showRatingModal, setShowRatingModal] = React.useState(false);
   const [ratingScore, setRatingScore] = React.useState(0);

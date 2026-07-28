@@ -152,8 +152,8 @@ export default function PrintSettingsScreen() {
       const printSettings = {
         order_id: currentOrderId,
         copies: copies,
-        color_mode: colorMode === 'color' ? 'Colored' : 'Black_and_White',
-        sided: doubleSided ? 'Double_sided' : 'Single_sided',
+        color_mode: (colorMode === 'color' ? 'Colored' : 'Black_and_White') as 'Colored' | 'Black_and_White',
+        sided: (doubleSided ? 'Double_sided' : 'Single_sided') as 'Double_sided' | 'Single_sided',
         page_range: pages === 'custom' ? `${startPage || 1}-${endPage || filePageCount}` : 'All',
         paper_size: paperSize,
         orientation: orientation,

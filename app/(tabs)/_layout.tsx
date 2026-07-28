@@ -13,17 +13,17 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
-  const { user_id, isLoggedIn } = useAuthStore();
+  const { user_id, token } = useAuthStore();
 
   React.useEffect(() => {
-    if (isLoggedIn && user_id) {
-      registerForPushNotificationsAsync().then(token => {
-        if (token) {
-          savePushTokenToBackend(user_id, token);
+    if (token && user_id) {
+      registerForPushNotificationsAsync().then(pushToken => {
+        if (pushToken) {
+          savePushTokenToBackend(user_id, pushToken);
         }
       });
     }
-  }, [isLoggedIn, user_id]);
+  }, [token, user_id]);
 
   return (
     <Tabs
