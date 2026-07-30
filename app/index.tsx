@@ -12,7 +12,7 @@ export default function SplashScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
 
     const init = async () => {
       try {

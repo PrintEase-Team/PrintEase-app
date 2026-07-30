@@ -1,9 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
+import { Client } from '@stomp/stompjs';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import {
   Alert,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SockJS from 'sockjs-client';
 import api from '../services/api';
 import { useOrderStore } from '../store/useOrderStore';
 
@@ -60,7 +60,7 @@ export default function OrderDetailsScreen() {
     fetchOrderData();
 
     if (currentStatus === 'Collected' || currentStatus === 'Completed' || currentStatus === 'Cancelled') return;
-    
+
     // Slow fallback polling
     const interval = setInterval(fetchOrderData, 30000);
 
@@ -98,8 +98,8 @@ export default function OrderDetailsScreen() {
   const [isRated, setIsRated] = React.useState((params.isRated as string) === 'true');
   const [submittingRating, setSubmittingRating] = React.useState(false);
 
-  const displayPrice = orderData?.payment_amount != null 
-    ? `GHS ${Number(orderData.payment_amount).toFixed(2)}` 
+  const displayPrice = orderData?.payment_amount != null
+    ? `GHS ${Number(orderData.payment_amount).toFixed(2)}`
     : price;
 
   const handleBack = () => {
@@ -131,8 +131,8 @@ export default function OrderDetailsScreen() {
       'Have you collected your prints from the shop?',
       [
         { text: 'Not Yet', style: 'cancel' },
-        { 
-          text: 'Yes, I got it', 
+        {
+          text: 'Yes, I got it',
           onPress: async () => {
             try {
               if (rawId) {
@@ -161,35 +161,35 @@ export default function OrderDetailsScreen() {
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Rate your experience</Text>
                 <Text style={styles.modalSubtitle}>How was your experience at {shopName}?</Text>
-                
+
                 <View style={styles.starsContainer}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => setRatingScore(star)}>
-                      <Feather 
-                        name="star" 
-                        size={36} 
-                        color={star <= ratingScore ? "#F59E0B" : "#D1D5DB"} 
+                      <Feather
+                        name="star"
+                        size={36}
+                        color={star <= ratingScore ? "#F59E0B" : "#D1D5DB"}
                         style={{ marginHorizontal: 8 }}
                       />
                     </TouchableOpacity>
                   ))}
                 </View>
 
-                <TouchableOpacity 
-                  style={[styles.modalButton, ratingScore === 0 && styles.modalButtonDisabled]} 
+                <TouchableOpacity
+                  style={[styles.modalButton, ratingScore === 0 && styles.modalButtonDisabled]}
                   disabled={ratingScore === 0 || submittingRating}
                   onPress={async () => {
                     if (shopId && rawId) {
                       setSubmittingRating(true);
                       try {
-                        await api.post(`/shops/${shopId}/rate`, { 
-                          orderId: rawId, 
-                          score: ratingScore 
+                        await api.post(`/shops/${shopId}/rate`, {
+                          orderId: rawId,
+                          score: ratingScore
                         });
                         Alert.alert('Thank you!', 'Your feedback helps improve the service.');
                         setShowRatingModal(false);
                         if (orderData) {
-                          setOrderData({...orderData, is_rated: true});
+                          setOrderData({ ...orderData, is_rated: true });
                         }
                       } catch (e: any) {
                         Alert.alert('Notice', e.response?.data?.message || 'Failed to submit rating, but your order is collected.');
@@ -207,7 +207,7 @@ export default function OrderDetailsScreen() {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.modalSkipButton}
                   disabled={submittingRating}
                   onPress={() => {
@@ -260,7 +260,7 @@ export default function OrderDetailsScreen() {
         {/* Document Details Section */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Document Details</Text>
-          
+
           {(orderData?.items && orderData.items.length > 0) ? orderData.items.map((item: any, index: number) => {
             const isPdf = item.file_type?.toLowerCase().includes('pdf');
             const itemPagesInfo = `${item.page_count ? item.page_count + ' pages • ' : ''}${item.copies ? item.copies + ' copies • ' : ''}${item.color_mode === 'Colored' ? 'Color' : 'Black & White'} • ${item.sided === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`;
@@ -310,8 +310,8 @@ export default function OrderDetailsScreen() {
               {currentStatus === 'Ready'
                 ? 'Your prints are ready! Show this code at the shop to collect.'
                 : currentStatus === 'Collected'
-                ? 'Order completed. Keep this code for your records.'
-                : 'Save this code — you\'ll need it to collect your prints when ready.'}
+                  ? 'Order completed. Keep this code for your records.'
+                  : 'Save this code — you\'ll need it to collect your prints when ready.'}
             </Text>
           </View>
         )}

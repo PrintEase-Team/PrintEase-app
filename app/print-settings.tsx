@@ -140,7 +140,7 @@ export default function PrintSettingsScreen() {
   const handleBack = () => {
     Alert.alert(
       'Discard File?',
-      'You haven\\'t saved print settings for this file yet. Leaving now will delete it.',
+      "You haven't saved print settings for this file yet. Leaving now will delete it.",
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -166,8 +166,8 @@ export default function PrintSettingsScreen() {
       handleBack();
       return true;
     };
-    BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
   }, [currentFileId]);
 
   const getPagesToPrint = () => {

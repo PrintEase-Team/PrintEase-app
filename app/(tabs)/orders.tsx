@@ -1,12 +1,9 @@
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Client } from '@stomp/stompjs';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
-import api from '../../services/api';
-import { useAuthStore } from '../../store/useAuthStore';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -16,6 +13,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SockJS from 'sockjs-client';
+import api from '../../services/api';
+import { useAuthStore } from '../../store/useAuthStore';
 
 // Define TS Types for clean state loading in future
 interface Order {
@@ -29,7 +29,7 @@ interface Order {
   price: string;
   status: 'Active' | 'Printing' | 'Ready' | 'Completed' | 'Cancelled';
   date: string;
-  fileType: 'pdf' | 'word';
+  fileType: 'pdf' | 'word' | 'batch' | 'img';
   rawId?: number | string;
   pickupCode?: string;
 }
@@ -101,14 +101,14 @@ export default function OrdersScreen() {
     try {
       const response = await api.get(`/orders/student/${user_id}`);
       const mappedOrders = response.data.map((o: any) => ({
-        id: o.order_id?.substring(0,8).toUpperCase(),
+        id: o.order_id?.substring(0, 8).toUpperCase(),
         rawId: o.order_id,
         shopId: o.shop_id,
         shopName: o.shop_name || 'Unknown Shop',
         shopLocation: o.shop_location || 'Unknown Location',
         waitTime: getWaitTime(o.estimated_ready_time),
         documentName: o.items && o.items.length > 1 ? `Multiple Files (${o.items.length})` : (o.items && o.items[0]?.document_name ? o.items[0].document_name : 'Document'),
-        pagesInfo: o.items && o.items.length > 1 
+        pagesInfo: o.items && o.items.length > 1
           ? `${o.items.reduce((acc: number, curr: any) => acc + (curr.page_count || 1), 0)} pages • ${o.items.reduce((acc: number, curr: any) => acc + (curr.copies || 1), 0)} total copies`
           : `${o.items && o.items[0]?.page_count ? o.items[0].page_count + ' pages • ' : ''}${o.items && o.items[0]?.copies ? o.items[0].copies + ' copies • ' : ''}${(o.items && o.items[0]?.color_mode) === 'Colored' ? 'Color' : 'Black & White'} • ${(o.items && o.items[0]?.sided) === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`,
         price: o.payment_amount != null ? `GHS ${Number(o.payment_amount).toFixed(2)}` : 'GHS --',
@@ -234,8 +234,8 @@ export default function OrdersScreen() {
                       isCurrent
                         ? styles.nodeLabelCurrent
                         : isCompleted
-                        ? styles.nodeLabelCompleted
-                        : styles.nodeLabelUpcoming,
+                          ? styles.nodeLabelCompleted
+                          : styles.nodeLabelUpcoming,
                     ]}
                   >
                     {label}
@@ -351,7 +351,7 @@ export default function OrdersScreen() {
                     <Text style={styles.shopName} numberOfLines={1}>
                       {order.shopName}
                     </Text>
-                    {order.waitTime !== '0 min' && (
+                    {order.waitTime !== '0 min' && order.waitTime !== 'Ready' && (
                       <Text
                         style={[
                           styles.waitTime,
@@ -361,7 +361,9 @@ export default function OrdersScreen() {
                         {order.waitTime}
                       </Text>
                     )}
-                    <Feather name="chevron-right" size={18} color="#9CA3AF" style={{ marginLeft: 4 }} />
+                    {order.waitTime !== 'Ready' && (
+                      <Feather name="chevron-right" size={18} color="#9CA3AF" style={{ marginLeft: 4 }} />
+                    )}
                   </View>
                 </View>
 
@@ -373,13 +375,18 @@ export default function OrdersScreen() {
                         styles.fileTypeBadge,
                         {
                           backgroundColor:
-                            order.fileType === 'pdf' ? '#EF4444' : '#2563EB',
+                            order.fileType === 'pdf' ? '#FEE2E2' : 
+                            order.fileType === 'batch' ? '#FEF3C7' :
+                            order.fileType === 'img' ? '#DBEAFE' : '#EDE9FE',
                         },
                       ]}
                     >
-                      <Text style={styles.fileTypeText}>
-                        {order.fileType === 'batch' ? 'DOCS' : (order.fileType === 'pdf' ? 'PDF' : 'W')}
-                      </Text>
+                      {order.fileType === 'pdf' && <Feather name="file-text" size={20} color="#EF4444" />}
+                      {order.fileType === 'batch' && <Feather name="copy" size={20} color="#F59E0B" />}
+                      {order.fileType === 'img' && <Feather name="image" size={20} color="#3B82F6" />}
+                      {order.fileType !== 'img' && order.fileType !== 'pdf' && order.fileType !== 'batch' && (
+                        <Feather name="file-text" size={20} color="#8B5CF6" />
+                      )}
                     </View>
                     <View style={styles.docDetailsContainer}>
                       <Text style={styles.documentName} numberOfLines={1}>
