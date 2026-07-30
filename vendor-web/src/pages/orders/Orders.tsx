@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import { Download, ChevronLeft, ChevronRight, MoreVertical, FileText, Book, Copy, ChevronsUpDown, Image } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -29,10 +31,40 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders();
+    
+    // Slow fallback polling just in case
     const interval = setInterval(() => {
       fetchOrders();
-    }, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
+    }, 30000); // Poll every 30 seconds instead of 5
+
+    const shopId = localStorage.getItem('shop_id');
+    const client = new Client({
+      webSocketFactory: () => new SockJS('http://localhost:8080/ws-printease'),
+      debug: function (str) {
+        console.log('STOMP: ' + str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    client.onConnect = function () {
+      if (shopId) {
+        client.subscribe('/topic/shop/' + shopId, (message) => {
+          if (message.body) {
+            // New or updated order received instantly via WebSocket
+            fetchOrders();
+          }
+        });
+      }
+    };
+
+    client.activate();
+
+    return () => {
+      clearInterval(interval);
+      client.deactivate();
+    };
   }, []);
 
   const fetchOrders = () => {
@@ -46,10 +78,10 @@ export default function Orders() {
           rawId: o.order_id,
           studentName: o.student_name || 'Unknown Student',
           phone: o.student_phone || 'N/A',
-          docName: o.document_name || 'Document',
-          pages: o.page_count || 1,
-          type: (o.file_type || 'pdf').toLowerCase().includes('pdf') ? 'pdf' : (o.file_type || '').toLowerCase().includes('image') ? 'img' : 'doc',
-          copies: o.copies || 1,
+          docName: o.items && o.items.length > 1 ? `Multiple Files (${o.items.length})` : (o.items && o.items[0]?.document_name ? o.items[0].document_name : 'Document'),
+          pages: o.items ? o.items.reduce((sum: number, item: any) => sum + (item.page_count || 1), 0) : 1,
+          type: o.items && o.items.length > 1 ? 'batch' : ((o.items && o.items[0]?.file_type || 'pdf').toLowerCase().includes('pdf') ? 'pdf' : (o.items && o.items[0]?.file_type || '').toLowerCase().includes('image') ? 'img' : 'doc'),
+          copies: o.items ? o.items.reduce((sum: number, item: any) => sum + (item.copies || 1), 0) : 1,
           price: o.payment_amount != null ? `GHS ${Number(o.payment_amount).toFixed(2)}` : 'GHS --',
           status: o.status === 'Collected' ? 'Completed' : (o.status || 'Pending'),
           date: o.submitted_at ? new Date(o.submitted_at).toLocaleDateString() : 'N/A',
@@ -229,6 +261,7 @@ export default function Orders() {
                         {order.type === 'pdf' && <FileText size={16} />}
                         {order.type === 'img' && <Image size={16} />}
                         {order.type === 'doc' && <FileText size={16} />}
+                        {order.type === 'batch' && <Copy size={16} />}
                       </div>
                       <div className={styles.docInfo}>
                         <span>{order.docName}</span>

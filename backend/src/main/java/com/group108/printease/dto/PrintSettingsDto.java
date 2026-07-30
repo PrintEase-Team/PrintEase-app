@@ -16,6 +16,7 @@ import java.util.UUID;
 public class PrintSettingsDto {
     private UUID setting_id;
     private UUID order_id;
+    private UUID file_id;
     private Integer copies;
     private Print_Settings.color_settings color_mode;
     private Print_Settings.settings_side sided;

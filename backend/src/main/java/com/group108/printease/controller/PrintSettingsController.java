@@ -29,6 +29,16 @@ public class PrintSettingsController {
         return ResponseEntity.ok(printSettingsDto);
     }
 
+    @GetMapping("/file/{fileId}")
+    public ResponseEntity<PrintSettingsDto> getPrintSettingsByFile(@PathVariable("fileId") UUID fileId) {
+        try {
+            PrintSettingsDto printSettingsDto = printSettingsService.getPrintSettingsByFile(fileId);
+            return ResponseEntity.ok(printSettingsDto);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     //REST API for all
     @GetMapping
     public ResponseEntity<List<PrintSettingsDto>> getAllPrintSettings(){

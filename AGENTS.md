@@ -246,3 +246,6 @@ If the user says "save changes", you MUST execute the following sequence:
 2. `git commit -m "..."` (with an appropriate message)
 3. `git push`
 Make sure everything is saved locally and pushed to the remote GitHub repository.
+
+# Mocks
+Never use mock data or bypass external integrations with simulated success. The application must be fully functional.

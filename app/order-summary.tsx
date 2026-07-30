@@ -3,68 +3,96 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOrderStore } from '@/store/useOrderStore';
 import { fileService } from '@/services/fileService';
 
-import api from '@/services/api';
+import api, { API_BASE } from '@/services/api';
 
 export default function OrderSummaryScreen() {
   const router = useRouter();
 
-  const { currentOrderId, currentFileId, totalAmount } = useOrderStore();
+  const { currentOrderId, currentFileId, fileCosts, totalAmount, setCurrentFileId, removeFileCost } = useOrderStore();
   const [isLoading, setIsLoading] = useState(true);
 
   // Local state holding order details
   const [orderData, setOrderData] = useState({
     shopName: 'Loading...',
     shopLocation: '...',
+    shopProfileUrl: null as string | null,
     queueTime: 'Calculating...',
-    fileName: 'Loading...',
-    filePages: 1,
-    fileSize: '0 KB',
-    copies: 1,
-    colorMode: 'Black & White',
-    paperSize: 'Unknown',
-    doubleSided: 'Yes',
+    files: [] as any[],
+    printSettings: [] as any[],
     totalAmount: `GHS ${totalAmount ? totalAmount.toFixed(2) : '0.00'}`,
   });
 
-  useEffect(() => {
-    const fetchFullOrder = async () => {
-      if (currentOrderId) {
-        try {
-          const response = await api.get(`/orders/${currentOrderId}/full`);
-          const data = response.data;
-          
-          const file = data.files && data.files.length > 0 ? data.files[0] : null;
-          const settings = data.printSettings && data.printSettings.length > 0 ? data.printSettings[0] : null;
-          
-          setOrderData(prev => ({
-            ...prev,
-            shopName: data.order?.shop?.shop_name || 'My Print Shop',
-            shopLocation: data.order?.shop?.location || '...',
-            fileName: file ? file.file_name : 'No file',
-            fileSize: file && file.file_size_kb ? `${file.file_size_kb} KB` : 'Unknown',
-            filePages: file && file.page_count ? file.page_count : 1,
-            copies: settings ? settings.copies : 1,
-            colorMode: settings && settings.color_mode ? settings.color_mode.replace('_', ' ') : 'Black & White',
-            paperSize: settings && settings.paper_size ? settings.paper_size.toUpperCase() : 'A4',
-            doubleSided: settings && settings.sided === 'Double_sided' ? 'Yes' : 'No',
-            totalAmount: data.order && data.order.total_amount ? `GHS ${data.order.total_amount.toFixed(2)}` : `GHS ${totalAmount ? totalAmount.toFixed(2) : '0.00'}`
-          }));
-        } catch (e) {
-          console.error("Failed to fetch full order data:", e);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
+  const fetchFullOrder = async () => {
+    if (currentOrderId) {
+      try {
+        const response = await api.get(`/orders/${currentOrderId}/full`);
+        const data = response.data;
+        
+        const getWaitTime = (estimatedReadyTime: string | null) => {
+          if (!estimatedReadyTime) return '-- min';
+          const now = new Date();
+          const readyAt = new Date(estimatedReadyTime);
+          const diffMs = readyAt.getTime() - now.getTime();
+          if (diffMs <= 0) return 'Ready';
+          return `${Math.ceil(diffMs / 60000)} min`;
+        };
+
+        setOrderData(prev => ({
+          ...prev,
+          shopName: data.order?.shop?.shop_name || 'My Print Shop',
+          shopLocation: data.order?.shop?.location || '...',
+          shopProfileUrl: data.order?.shop?.profile_picture_url || null,
+          queueTime: getWaitTime(data.order?.estimated_ready_time),
+          files: data.files || [],
+          printSettings: data.printSettings || [],
+          totalAmount: data.order && data.order.total_amount ? `GHS ${data.order.total_amount.toFixed(2)}` : `GHS ${totalAmount ? totalAmount.toFixed(2) : '0.00'}`
+        }));
+      } catch (e) {
+        console.error("Failed to fetch full order data:", e);
+      } finally {
         setIsLoading(false);
       }
-    };
+    } else {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFullOrder();
   }, [currentOrderId, totalAmount]);
+
+  const handleDeleteFile = (fileId: string) => {
+    Alert.alert('Remove Document', 'Are you sure you want to remove this document?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setIsLoading(true);
+            await api.delete(`/file/${fileId}`);
+            removeFileCost(fileId);
+            await fetchFullOrder();
+          } catch (e) {
+            Alert.alert('Error', 'Could not remove document.');
+            setIsLoading(false);
+          }
+        }
+      }
+    ]);
+  };
+
+  const handleEditFile = (file: any) => {
+    if (file.file_id) {
+      setCurrentFileId(file.file_id, file.page_count || 1);
+      router.push('/print-settings' as any);
+    }
+  };
 
   const handleBack = () => {
     router.back();
@@ -96,13 +124,17 @@ export default function OrderSummaryScreen() {
         </View>
       ) : (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {(() => {
+          const hasOrphanedFiles = orderData?.files?.some((f: any) => !orderData.printSettings.find((s: any) => s.file_id?.file_id === f.file_id));
+          return (
+            <>
         {/* Selected Print Shop Card */}
         <View style={styles.shopCard}>
           <View style={styles.shopImageContainer}>
             <Image
-              source={require('@/assets/images/logo-img.png')}
+              source={orderData.shopProfileUrl ? { uri: `${API_BASE}${orderData.shopProfileUrl}` } : require('@/assets/images/logo-img.png')}
               style={styles.shopImage}
-              resizeMode="contain"
+              resizeMode={orderData.shopProfileUrl ? "cover" : "contain"}
             />
           </View>
           <View style={styles.shopInfoContainer}>
@@ -115,51 +147,112 @@ export default function OrderSummaryScreen() {
           </View>
         </View>
 
-        {/* Uploaded File Card */}
-        <TouchableOpacity style={styles.fileCard} activeOpacity={0.8}>
-          <View style={styles.pdfIconContainer}>
-            <Text style={styles.pdfText}>PDF</Text>
-          </View>
-          <View style={styles.fileInfoContainer}>
-            <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
-              {orderData.fileName}
-            </Text>
-            <Text style={styles.fileDetails}>
-              {orderData.filePages} pages • {orderData.fileSize}
-            </Text>
-          </View>
-          <Feather name="chevron-right" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-
-        {/* Summary Title */}
-        <Text style={styles.summaryTitle}>Summary</Text>
-
-        {/* Summary List */}
+        {/* Files Loop */}
+        <Text style={styles.summaryTitle}>Cart Items</Text>
         <View style={styles.summaryList}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryKey}>Copies</Text>
-            <Text style={styles.summaryValue}>{orderData.copies}</Text>
-          </View>
+          {orderData.files.map((file: any) => {
+            const settings = orderData.printSettings.find((s: any) => s.file_id?.file_id === file.file_id);
+            const isOrphaned = !settings;
+              
+            return (
+              <View key={file.file_id} style={{marginBottom: 20}}>
+                <View style={[styles.fileCard, {marginBottom: 8}]}>
+                  <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
+                    <View style={[
+                      styles.pdfIconContainer, 
+                      (file.file_type?.startsWith('image/') || file.file_name?.match(/\.(jpg|jpeg|png|gif)$/i)) ? { backgroundColor: '#3B82F6' } : {}
+                    ]}>
+                      {(file.file_type?.startsWith('image/') || file.file_name?.match(/\.(jpg|jpeg|png|gif)$/i)) ? (
+                        <Ionicons name="image" size={24} color="#ffffff" />
+                      ) : (
+                        <Text style={styles.pdfText}>PDF</Text>
+                      )}
+                    </View>
+                    <View style={styles.fileInfoContainer}>
+                      <Text style={styles.fileName} numberOfLines={1}>{file.file_name}</Text>
+                      <Text style={styles.fileDetails}>
+                        {file.file_size_kb} KB • {file.page_count || 1} pages
+                      </Text>
+                      {isOrphaned ? (
+                        <Text style={{fontSize: 13, color: '#EF4444', fontFamily: 'Poppins-Bold', marginTop: 2}}>
+                          ⚠️ Missing Print Settings
+                        </Text>
+                      ) : (
+                        fileCosts && fileCosts[file.file_id] !== undefined && (
+                          <Text style={{fontSize: 13, color: '#005CE6', fontFamily: 'Poppins-Medium', marginTop: 2}}>
+                            Cost: GHS {fileCosts[file.file_id].toFixed(2)}
+                          </Text>
+                        )
+                      )}
+                    </View>
+                  </View>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <TouchableOpacity 
+                      style={{ padding: 8, marginRight: 4 }} 
+                      onPress={() => handleEditFile(file)}
+                    >
+                      <Feather name="edit-2" size={20} color="#005CE6" />
+                    </TouchableOpacity>
 
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryKey}>Color</Text>
-            <Text style={styles.summaryValue}>{orderData.colorMode}</Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryKey}>Paper Size</Text>
-            <Text style={styles.summaryValue}>{orderData.paperSize}</Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryKey}>Double-sided</Text>
-            <Text style={styles.summaryValue}>{orderData.doubleSided}</Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryKey}>Pages</Text>
-            <Text style={styles.summaryValue}>{orderData.filePages}</Text>
-          </View>
+                    <TouchableOpacity 
+                      style={{ padding: 8 }} 
+                      onPress={() => handleDeleteFile(file.file_id)}
+                    >
+                      <Feather name="trash-2" size={20} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {/* File Settings Summary */}
+                {isOrphaned ? (
+                  <View style={{backgroundColor: '#FEE2E2', padding: 12, borderRadius: 12, marginHorizontal: 4, alignItems: 'center'}}>
+                    <Text style={{color: '#EF4444', fontFamily: 'Poppins-Medium', fontSize: 13}}>
+                      This file is incomplete. Please delete it to proceed.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, marginHorizontal: 4}}>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryKey}>Copies</Text>
+                      <Text style={styles.summaryValue}>{settings.copies || 1}</Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryKey}>Color</Text>
+                      <Text style={styles.summaryValue}>{settings.color_mode ? settings.color_mode.replace('_', ' ') : 'B&W'}</Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryKey}>Sided</Text>
+                      <Text style={styles.summaryValue}>{settings.sided && settings.sided.toLowerCase() === 'double_sided' ? 'Yes' : 'No'}</Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryKey}>Page Range</Text>
+                      <Text style={styles.summaryValue}>{settings.page_range || 'All'}</Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryKey}>Paper Size</Text>
+                      <Text style={styles.summaryValue}>{settings.paper_size ? settings.paper_size.toUpperCase() : 'A4'}</Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryKey}>Orientation</Text>
+                      <Text style={styles.summaryValue}>{settings.orientation || 'Portrait'}</Text>
+                    </View>
+                    {settings.requires_binding && (
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryKey}>Binding</Text>
+                        <Text style={styles.summaryValue}>Yes</Text>
+                      </View>
+                    )}
+                    {settings.requires_lamination && (
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryKey}>Lamination</Text>
+                        <Text style={styles.summaryValue}>Yes</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
 
           {/* Divider */}
           <View style={styles.divider} />
@@ -179,14 +272,26 @@ export default function OrderSummaryScreen() {
           </Text>
         </View>
 
-        {/* Action Button */}
+        {/* Add Another Document Button */}
         <TouchableOpacity
-          onPress={handleContinue}
-          style={styles.continueButton}
+          onPress={() => router.push('/upload-file' as any)}
+          style={[styles.continueButton, {backgroundColor: '#EAF1FC', marginBottom: 12}]}
           activeOpacity={0.8}
         >
-          <Text style={styles.continueButtonText}>Continue to Payment</Text>
+          <Text style={[styles.continueButtonText, {color: '#005CE6'}]}>+ Add Another Document</Text>
         </TouchableOpacity>
+
+        {/* Action Button */}
+        <TouchableOpacity
+          onPress={hasOrphanedFiles ? () => Alert.alert('Incomplete Files', 'Please delete any incomplete files (⚠️) before proceeding.') : handleContinue}
+          style={[styles.continueButton, hasOrphanedFiles && {backgroundColor: '#9CA3AF'}]}
+          activeOpacity={hasOrphanedFiles ? 1 : 0.8}
+        >
+          <Text style={styles.continueButtonText}>Proceed to Payment</Text>
+        </TouchableOpacity>
+        </>
+        );
+        })()}
       </ScrollView>
       )}
     </SafeAreaView>
@@ -292,6 +397,7 @@ const styles = StyleSheet.create({
   fileCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#F3F4F6',

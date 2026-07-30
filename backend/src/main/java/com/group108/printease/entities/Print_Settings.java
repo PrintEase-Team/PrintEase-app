@@ -43,6 +43,15 @@ public class Print_Settings {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Orders order_id;
 
+    @ManyToOne
+    @JoinColumn(
+            name = "file_id",
+            nullable = true,
+            foreignKey = @ForeignKey(name = "print_settings_file_id_fk")
+    )
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Files file_id;
+
     @Column(name = "copies", nullable = false)
     private Integer copies;
 

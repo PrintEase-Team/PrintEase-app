@@ -11,4 +11,8 @@ import java.util.UUID;
 public interface PaymentRepository extends JpaRepository<Payments, UUID> {
     @Query("SELECT p FROM Payments p WHERE p.order_id = :order")
     List<Payments> findByOrder(@Param("order") Orders order);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM Payments p WHERE p.order_id = :order")
+    void deleteByOrder(@Param("order") Orders order);
 }

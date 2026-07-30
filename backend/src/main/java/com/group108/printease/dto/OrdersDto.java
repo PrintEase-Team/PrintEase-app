@@ -9,6 +9,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 
 @Setter
 @Getter
@@ -27,15 +28,10 @@ public class OrdersDto {
     private LocalDateTime collected_at;
     private Boolean notified;
     private BigDecimal payment_amount;
-    private String document_name;
-    private String file_type;
-    private Integer page_count;
-    private Integer copies;
-    private String color_mode;
-    private String sided;
-    private Boolean requires_binding;
+    private List<OrderItemDto> items;
     private String student_name;
     private String student_phone;
     private String shop_name;
     private String shop_location;
+    private Boolean is_rated;
 }

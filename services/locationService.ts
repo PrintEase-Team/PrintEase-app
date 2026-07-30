@@ -110,7 +110,7 @@ export const getCurrentDeviceLocation = async (): Promise<DeviceLocationResult |
       const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
       if (geocode && geocode.length > 0) {
         const place = geocode[0];
-        addressName = place.district || place.subregion || place.name || place.city || 'Your Location';
+        addressName = place.name || place.district || place.subregion || place.city || 'Your Location';
       }
     } catch (e) {
       console.warn('Reverse geocoding failed, fallback to default name:', e);

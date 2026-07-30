@@ -2,6 +2,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import {
   Alert,
   ScrollView,
@@ -33,32 +35,72 @@ export default function OrderDetailsScreen() {
   const pickupCode = (params.pickupCode as string) || '------';
   const [currentStatus, setCurrentStatus] = React.useState(initialStatus);
 
+  const [orderData, setOrderData] = React.useState<any>(null);
+
   React.useEffect(() => {
-    if (!rawId || currentStatus === 'Collected' || currentStatus === 'Completed' || currentStatus === 'Cancelled') return;
-    
-    const interval = setInterval(async () => {
+    if (!rawId) return;
+
+    const fetchOrderData = async () => {
       try {
         const res = await api.get(`/orders/${rawId}`);
-        if (res.data && res.data.status) {
-          const newStatus = res.data.status;
-          if (newStatus !== currentStatus) {
-            setCurrentStatus(newStatus);
-            if (newStatus === 'Collected' || newStatus === 'Completed') {
+        if (res.data) {
+          setOrderData(res.data);
+          if (res.data.status && res.data.status !== currentStatus) {
+            setCurrentStatus(res.data.status);
+            if (res.data.status === 'Collected' || res.data.status === 'Completed') {
               setShowRatingModal(true);
             }
           }
         }
       } catch (error) {
-        // Silently ignore polling errors
+        // Silently ignore
       }
-    }, 5000);
+    };
 
-    return () => clearInterval(interval);
-  }, [rawId, currentStatus]);
+    fetchOrderData();
+
+    if (currentStatus === 'Collected' || currentStatus === 'Completed' || currentStatus === 'Cancelled') return;
+    
+    // Slow fallback polling
+    const interval = setInterval(fetchOrderData, 30000);
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${api.defaults.baseURL?.replace('/api', '')}/ws-printease`),
+      debug: function (str) {
+        console.log('STOMP (Details): ' + str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    client.onConnect = function () {
+      if (orderData?.student_id) {
+        client.subscribe('/topic/student/' + orderData.student_id, (message) => {
+          if (message.body) {
+            fetchOrderData();
+          }
+        });
+      }
+    };
+
+    client.activate();
+
+    return () => {
+      clearInterval(interval);
+      client.deactivate();
+    };
+  }, [rawId, currentStatus, orderData?.student_id]);
+
   const { clearCurrentOrder } = useOrderStore();
   const [showRatingModal, setShowRatingModal] = React.useState(false);
   const [ratingScore, setRatingScore] = React.useState(0);
+  const [isRated, setIsRated] = React.useState((params.isRated as string) === 'true');
   const [submittingRating, setSubmittingRating] = React.useState(false);
+
+  const displayPrice = orderData?.payment_amount != null 
+    ? `GHS ${Number(orderData.payment_amount).toFixed(2)}` 
+    : price;
 
   const handleBack = () => {
     router.replace('/(tabs)/orders' as any);
@@ -146,17 +188,17 @@ export default function OrderDetailsScreen() {
                         });
                         Alert.alert('Thank you!', 'Your feedback helps improve the service.');
                         setShowRatingModal(false);
-                        router.replace('/(tabs)/orders' as any);
+                        if (orderData) {
+                          setOrderData({...orderData, is_rated: true});
+                        }
                       } catch (e: any) {
                         Alert.alert('Notice', e.response?.data?.message || 'Failed to submit rating, but your order is collected.');
                         setShowRatingModal(false);
-                        router.replace('/(tabs)/orders' as any);
                       } finally {
                         setSubmittingRating(false);
                       }
                     } else {
                       setShowRatingModal(false);
-                      router.replace('/(tabs)/orders' as any);
                     }
                   }}
                 >
@@ -170,7 +212,6 @@ export default function OrderDetailsScreen() {
                   disabled={submittingRating}
                   onPress={() => {
                     setShowRatingModal(false);
-                    router.replace('/(tabs)/orders' as any);
                   }}
                 >
                   <Text style={styles.modalSkipButtonText}>Skip for now</Text>
@@ -219,26 +260,38 @@ export default function OrderDetailsScreen() {
         {/* Document Details Section */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Document Details</Text>
-          <View style={styles.row}>
-            <View
-              style={[
-                styles.fileIconContainer,
-                { backgroundColor: fileType === 'pdf' ? '#EF4444' : '#2563EB' },
-              ]}
-            >
-              <Text style={styles.fileTypeText}>{fileType === 'pdf' ? 'PDF' : 'W'}</Text>
+          
+          {(orderData?.items && orderData.items.length > 0) ? orderData.items.map((item: any, index: number) => {
+            const isPdf = item.file_type?.toLowerCase().includes('pdf');
+            const itemPagesInfo = `${item.page_count ? item.page_count + ' pages • ' : ''}${item.copies ? item.copies + ' copies • ' : ''}${item.color_mode === 'Colored' ? 'Color' : 'Black & White'} • ${item.sided === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`;
+            return (
+              <View key={item.file_id || index} style={[styles.row, { marginBottom: index < orderData.items.length - 1 ? 16 : 0 }]}>
+                <View style={[styles.fileIconContainer, { backgroundColor: isPdf ? '#EF4444' : '#2563EB' }]}>
+                  <Text style={styles.fileTypeText}>{isPdf ? 'PDF' : 'W'}</Text>
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.boldText} numberOfLines={1}>{item.document_name || 'Document'}</Text>
+                  <Text style={styles.subText}>{itemPagesInfo}</Text>
+                </View>
+              </View>
+            );
+          }) : (
+            <View style={styles.row}>
+              <View style={[styles.fileIconContainer, { backgroundColor: fileType === 'pdf' ? '#EF4444' : (fileType === 'batch' ? '#F59E0B' : '#2563EB') }]}>
+                <Text style={styles.fileTypeText}>{fileType === 'batch' ? 'DOCS' : (fileType === 'pdf' ? 'PDF' : 'W')}</Text>
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.boldText} numberOfLines={1}>{documentName}</Text>
+                <Text style={styles.subText}>{pagesInfo}</Text>
+              </View>
             </View>
-            <View style={styles.textContainer}>
-              <Text style={styles.boldText} numberOfLines={1}>{documentName}</Text>
-              <Text style={styles.subText}>{pagesInfo}</Text>
-            </View>
-          </View>
+          )}
 
           <View style={styles.divider} />
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Amount Paid</Text>
-            <Text style={styles.priceValue}>{price}</Text>
+            <Text style={styles.priceValue}>{displayPrice}</Text>
           </View>
         </View>
 
@@ -266,6 +319,12 @@ export default function OrderDetailsScreen() {
         {currentStatus === 'Ready' && (
           <TouchableOpacity onPress={handleConfirmPickup} style={{ marginTop: 8, marginBottom: 16, backgroundColor: '#10B981', paddingVertical: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#10B981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 2 }}>
             <Text style={{ color: '#ffffff', fontFamily: 'Poppins-Bold', fontSize: 15 }}>I have taken this order</Text>
+          </TouchableOpacity>
+        )}
+
+        {(currentStatus === 'Collected' || currentStatus === 'Completed') && !isRated && (
+          <TouchableOpacity onPress={() => setShowRatingModal(true)} style={{ marginTop: 8, marginBottom: 16, backgroundColor: '#005CE6', paddingVertical: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#005CE6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 2 }}>
+            <Text style={{ color: '#ffffff', fontFamily: 'Poppins-Bold', fontSize: 15 }}>Rate this Print Shop</Text>
           </TouchableOpacity>
         )}
 

@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Paystack } from 'react-native-paystack-webview';
+import PaystackBottomSheet from '@/components/PaystackBottomSheet';
 import { paymentService } from '@/services/paymentService';
 import { useOrderStore } from '@/store/useOrderStore';
 
@@ -15,7 +15,7 @@ export default function PaymentScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
   const { currentOrderId, totalAmount } = useOrderStore();
-  const paystackWebViewRef = useRef<any>(null);
+  const [showPaystack, setShowPaystack] = useState(false);
 
   const handleBack = () => {
     router.back();
@@ -38,7 +38,7 @@ export default function PaymentScreen() {
       setCurrentPaymentId(payment.payment_id);
       
       // Open Paystack modal
-      paystackWebViewRef.current.startTransaction();
+      setShowPaystack(true);
       
     } catch (e: any) {
       console.error(e);
@@ -63,7 +63,7 @@ export default function PaymentScreen() {
 
   const handlePaystackCancel = () => {
     setIsProcessing(false);
-    Alert.alert('Payment Cancelled', 'You cancelled the payment process.');
+    setShowPaystack(false);
   };
 
   // Payment Methods Data matching design list
@@ -261,17 +261,16 @@ export default function PaymentScreen() {
           <Text style={styles.paystackWordmark}>paystack</Text>
         </View>
 
-        {/* Hidden Paystack component */}
-        <Paystack
-          paystackKey="pk_test_fc9b29dd5dcf28a34c9d07a904d4ae06d57576d1" // Test public key
-          amount={totalAmount || 0} // react-native-paystack-webview expects GHS (not pesewas)
-          billingEmail="student@university.edu" // Replace with actual user email from state
-          activityIndicatorColor="#005CE6"
-          onCancel={handlePaystackCancel}
-          onSuccess={(res: any) => handlePaystackSuccess(res?.transactionRef?.reference || res?.reference || 'test_ref')}
-          autoStart={false}
-          ref={paystackWebViewRef}
-          currency="GHS"
+        {/* Custom Paystack Bottom Sheet */}
+        <PaystackBottomSheet
+          visible={showPaystack}
+          onClose={handlePaystackCancel}
+          onSuccess={(ref) => {
+            setShowPaystack(false);
+            handlePaystackSuccess(ref);
+          }}
+          amount={totalAmount || 0}
+          email="student@university.edu"
         />
 
       </ScrollView>

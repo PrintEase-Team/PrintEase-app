@@ -10,6 +10,7 @@ public class PrintSettingsmapper {
         return new PrintSettingsDto(
                 printSettings.getSetting_id(),
                 printSettings.getOrder_id() != null ? printSettings.getOrder_id().getOrder_id() : null,
+                printSettings.getFile_id() != null ? printSettings.getFile_id().getFile_id() : null,
                 printSettings.getCopies(),
                 printSettings.getColor_mode(),
                 printSettings.getSided(),
@@ -26,6 +27,7 @@ public class PrintSettingsmapper {
         Print_Settings printSettings = new Print_Settings();
         printSettings.setSetting_id(printSettingsDto.getSetting_id());
         printSettings.setOrder_id(order);
+        // file_id will be mapped separately in the service if needed, or we can pass Files as argument
         printSettings.setCopies(printSettingsDto.getCopies());
         printSettings.setColor_mode(printSettingsDto.getColor_mode());
         printSettings.setSided(printSettingsDto.getSided());

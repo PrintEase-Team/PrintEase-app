@@ -21,7 +21,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
+
 import com.group108.printease.repositories.PaymentRepository;
+import com.group108.printease.dto.OrderItemDto;
+import java.util.ArrayList;
 
 @Service
 @AllArgsConstructor
@@ -34,6 +39,7 @@ public class OrdersServiceimpl implements OrdersService {
     private final PrintShopsRepository printShopsRepository;
     private final NotificationsService notificationsService;
     private final com.group108.printease.service.ExpoPushService expoPushService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Override
     public OrdersDto createOrders(OrdersDto ordersDto) {
@@ -61,7 +67,12 @@ public class OrdersServiceimpl implements OrdersService {
         order.setEstimated_ready_time(java.time.LocalDateTime.now().plusMinutes(baseWaitMinutes));
 
         Orders savedOrder = ordersRepository.save(order);
-        return Ordersmapper.mapToOrdersDto(savedOrder);
+        OrdersDto responseDto = Ordersmapper.mapToOrdersDto(savedOrder);
+        
+        // Broadcast to shop
+        messagingTemplate.convertAndSend("/topic/shop/" + shop.getShop_id(), responseDto);
+        
+        return responseDto;
     }
 
     @Override
@@ -173,7 +184,22 @@ public class OrdersServiceimpl implements OrdersService {
             }
         }
 
-        return Ordersmapper.mapToOrdersDto(savedOrder);
+        OrdersDto responseDto = Ordersmapper.mapToOrdersDto(savedOrder);
+        
+        // Broadcast updates to shop and student (After Commit)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                if (orders.getShop() != null) {
+                    messagingTemplate.convertAndSend("/topic/shop/" + orders.getShop().getShop_id(), responseDto);
+                }
+                if (orders.getStudent_id() != null) {
+                    messagingTemplate.convertAndSend("/topic/student/" + orders.getStudent_id().getUser_id(), responseDto);
+                }
+            }
+        });
+
+        return responseDto;
     }
 
     @Override
@@ -182,6 +208,7 @@ public class OrdersServiceimpl implements OrdersService {
         Orders order = ordersRepository.findById(order_id)
                 .orElseThrow(() -> new ResourceNotFoundException("No order exists with id: " + order_id));
 
+        paymentRepository.deleteByOrder(order);
         printSettingsRepository.deleteByOrder(order);
         filesRepository.deleteByOrder(order);
         ordersRepository.delete(order);
@@ -199,20 +226,36 @@ public class OrdersServiceimpl implements OrdersService {
         }
 
         List<com.group108.printease.entities.Files> files = filesRepository.findByOrder(order);
-        if (!files.isEmpty()) {
-            com.group108.printease.entities.Files file = files.get(0);
-            dto.setDocument_name(file.getFile_name());
-            dto.setFile_type(file.getFile_type());
-            dto.setPage_count(file.getPage_count());
-        }
+        List<com.group108.printease.entities.Print_Settings> allSettings = printSettingsRepository.findByOrder(order);
+        List<OrderItemDto> items = new ArrayList<>();
 
-        List<com.group108.printease.entities.Print_Settings> settings = printSettingsRepository.findByOrder(order);
-        if (!settings.isEmpty()) {
-            com.group108.printease.entities.Print_Settings setting = settings.get(0);
-            dto.setCopies(setting.getCopies());
-            if (setting.getColor_mode() != null) dto.setColor_mode(setting.getColor_mode().name());
-            if (setting.getSided() != null) dto.setSided(setting.getSided().name());
-            if (setting.getRequires_binding() != null) dto.setRequires_binding(setting.getRequires_binding());
+        for (com.group108.printease.entities.Files file : files) {
+            OrderItemDto item = new OrderItemDto();
+            item.setFile_id(file.getFile_id());
+            item.setDocument_name(file.getFile_name());
+            item.setFile_type(file.getFile_type());
+            item.setPage_count(file.getPage_count());
+            
+            // Find settings linked to this file
+            com.group108.printease.entities.Print_Settings matchingSetting = allSettings.stream()
+                .filter(s -> s.getFile_id() != null && s.getFile_id().getFile_id().equals(file.getFile_id()))
+                .findFirst()
+                .orElse(null);
+                
+            // Removed fallback for ghost files so they strictly remain orphaned.
+
+            if (matchingSetting != null) {
+                item.setSetting_id(matchingSetting.getSetting_id());
+                item.setCopies(matchingSetting.getCopies());
+                item.setPage_range(matchingSetting.getPage_range());
+                if (matchingSetting.getColor_mode() != null) item.setColor_mode(matchingSetting.getColor_mode().name());
+                if (matchingSetting.getSided() != null) item.setSided(matchingSetting.getSided().name());
+                if (matchingSetting.getRequires_binding() != null) item.setRequires_binding(matchingSetting.getRequires_binding());
+            }
+            
+            items.add(item);
         }
+        
+        dto.setItems(items);
     }
 }

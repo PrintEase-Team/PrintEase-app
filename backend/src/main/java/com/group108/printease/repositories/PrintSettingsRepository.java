@@ -15,7 +15,13 @@ public interface PrintSettingsRepository extends JpaRepository<Print_Settings, U
     @Query("delete from Print_Settings p where p.order_id = :order")
     void deleteByOrder(@Param("order") Orders order);
 
+    @Modifying
+    @Query("delete from Print_Settings p where p.file_id = :file")
+    void deleteByFile(@Param("file") com.group108.printease.entities.Files file);
+
     @Query("select p from Print_Settings p where p.order_id = :order")
     java.util.List<Print_Settings> findByOrder(@Param("order") Orders order);
 
+    @Query("select p from Print_Settings p where p.file_id = :file")
+    java.util.List<Print_Settings> findByFile(@Param("file") com.group108.printease.entities.Files file);
 }

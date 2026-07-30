@@ -9,6 +9,7 @@ public interface PrintSettingsService {
     PrintSettingsDto createprintsettings(PrintSettingsDto printSettingsDto);
 
     PrintSettingsDto getprintsettings(UUID setting_id);
+    PrintSettingsDto getPrintSettingsByFile(UUID file_id);
     List<PrintSettingsDto> getAllPrintingSettings();
     PrintSettingsDto updatePrintSettings(UUID settings_id, PrintSettingsDto updatePrintSetting);
     void deletePrintSettings(UUID settings_id);

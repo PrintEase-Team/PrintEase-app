@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/useAuthStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -11,11 +12,30 @@ export default function SplashScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace('/onboarding1' as any);
-    }, 2500);
+    let timer: NodeJS.Timeout;
 
-    return () => clearTimeout(timer);
+    const init = async () => {
+      try {
+        await useAuthStore.getState().hydrate();
+      } catch (e) {
+        console.error("Hydration error:", e);
+      }
+      
+      timer = setTimeout(() => {
+        const hasToken = useAuthStore.getState().token !== null;
+        if (hasToken) {
+          router.replace('/(tabs)' as any);
+        } else {
+          router.replace('/onboarding1' as any);
+        }
+      }, 2500);
+    };
+
+    init();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [router]);
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

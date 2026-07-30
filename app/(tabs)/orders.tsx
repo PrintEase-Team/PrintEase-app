@@ -3,6 +3,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useCallback } from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/useAuthStore';
 import {
@@ -43,11 +45,39 @@ export default function OrdersScreen() {
 
   useEffect(() => {
     fetchOrders();
-    // Auto-poll every 10 seconds
+    // Slow fallback polling
     const interval = setInterval(() => {
       fetchOrders();
-    }, 10000);
-    return () => clearInterval(interval);
+    }, 30000);
+
+    const client = new Client({
+      // We must use the local network IP instead of localhost for Android emulators
+      // Wait, api.ts uses an env var or a hardcoded IP, I should use the same base URL
+      webSocketFactory: () => new SockJS(`${api.defaults.baseURL?.replace('/api', '')}/ws-printease`),
+      debug: function (str) {
+        console.log('STOMP: ' + str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    client.onConnect = function () {
+      if (user_id) {
+        client.subscribe('/topic/student/' + user_id, (message) => {
+          if (message.body) {
+            fetchOrders();
+          }
+        });
+      }
+    };
+
+    client.activate();
+
+    return () => {
+      clearInterval(interval);
+      client.deactivate();
+    };
   }, [user_id]);
 
   const onRefresh = useCallback(async () => {
@@ -77,13 +107,16 @@ export default function OrdersScreen() {
         shopName: o.shop_name || 'Unknown Shop',
         shopLocation: o.shop_location || 'Unknown Location',
         waitTime: getWaitTime(o.estimated_ready_time),
-        documentName: o.document_name || 'Document',
-        pagesInfo: `${o.page_count ? o.page_count + ' pages • ' : ''}${o.copies ? o.copies + ' copies • ' : ''}${o.color_mode === 'Colored' ? 'Color' : 'Black & White'} • ${o.sided === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`,
+        documentName: o.items && o.items.length > 1 ? `Multiple Files (${o.items.length})` : (o.items && o.items[0]?.document_name ? o.items[0].document_name : 'Document'),
+        pagesInfo: o.items && o.items.length > 1 
+          ? `${o.items.reduce((acc: number, curr: any) => acc + (curr.page_count || 1), 0)} pages • ${o.items.reduce((acc: number, curr: any) => acc + (curr.copies || 1), 0)} total copies`
+          : `${o.items && o.items[0]?.page_count ? o.items[0].page_count + ' pages • ' : ''}${o.items && o.items[0]?.copies ? o.items[0].copies + ' copies • ' : ''}${(o.items && o.items[0]?.color_mode) === 'Colored' ? 'Color' : 'Black & White'} • ${(o.items && o.items[0]?.sided) === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`,
         price: o.payment_amount != null ? `GHS ${Number(o.payment_amount).toFixed(2)}` : 'GHS --',
         status: o.status === 'Pending' ? 'Active' : (o.status === 'Collected' ? 'Completed' : o.status),
         date: o.submitted_at ? new Date(o.submitted_at).toLocaleString() : 'N/A',
-        fileType: o.file_type || 'pdf',
-        pickupCode: o.pickup_code
+        fileType: o.items && o.items.length > 1 ? 'batch' : (o.items && o.items[0]?.file_type ? o.items[0].file_type : 'pdf'),
+        pickupCode: o.pickup_code,
+        isRated: o.is_rated
       }));
       setOrders(mappedOrders.reverse());
     } catch (error) {
@@ -141,6 +174,7 @@ export default function OrdersScreen() {
         fileType: order.fileType,
         pickupCode: (order as any).pickupCode,
         rawId: order.rawId,
+        isRated: (order as any).isRated ? 'true' : 'false',
       },
     } as any);
   };
@@ -344,7 +378,7 @@ export default function OrdersScreen() {
                       ]}
                     >
                       <Text style={styles.fileTypeText}>
-                        {order.fileType === 'pdf' ? 'PDF' : 'W'}
+                        {order.fileType === 'batch' ? 'DOCS' : (order.fileType === 'pdf' ? 'PDF' : 'W')}
                       </Text>
                     </View>
                     <View style={styles.docDetailsContainer}>

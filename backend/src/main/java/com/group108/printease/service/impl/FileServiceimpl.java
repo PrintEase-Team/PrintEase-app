@@ -8,6 +8,7 @@ import com.group108.printease.exception.ResourceNotFoundException;
 import com.group108.printease.mapper.Filesmapper;
 import com.group108.printease.repositories.FilesRepository;
 import com.group108.printease.repositories.OrdersRepository;
+import com.group108.printease.repositories.PrintSettingsRepository;
 import com.group108.printease.repositories.UsersRepository;
 import com.group108.printease.service.FileService;
 import jakarta.persistence.EntityNotFoundException;
@@ -29,6 +30,7 @@ public class FileServiceimpl implements FileService {
     private final FilesRepository filesRepository;
     private final OrdersRepository ordersRepository;
     private final UsersRepository usersRepository;
+    private final PrintSettingsRepository printSettingsRepository;
 
     @Override
     public FileDto uploadFile(UUID orderId, UUID uploadedBy, org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
@@ -129,11 +131,13 @@ public class FileServiceimpl implements FileService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void deleteFile(UUID file_id) {
         Files files = filesRepository.findById(file_id)
                 .orElseThrow(
                         ()-> new ResourceNotFoundException("No file exits with file id"+ file_id)
                 );
+        printSettingsRepository.deleteByFile(files);
         filesRepository.delete(files);
 
     }

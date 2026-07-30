@@ -21,17 +21,12 @@ public class Ordersmapper {
                 orders.getCollected_at(),
                 orders.isNotified(),
                 null, // payment_amount
-                null, // document_name
-                null, // file_type
-                null, // page_count
-                null, // copies
-                null, // color_mode
-                null,  // sided
-                null, // requires_binding
+                null, // items
                 orders.getStudent_id() != null ? orders.getStudent_id().getFull_name() : null, // student_name
                 orders.getStudent_id() != null ? orders.getStudent_id().getPhone_number() : null, // student_phone
                 null, // shop_name
-                null  // shop_location
+                null,  // shop_location
+                orders.is_rated() // is_rated
         );
     }
 

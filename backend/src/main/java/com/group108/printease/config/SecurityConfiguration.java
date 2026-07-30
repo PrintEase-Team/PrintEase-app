@@ -39,6 +39,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/payment", "/api/payment/**").permitAll()
                         .requestMatchers("/api/shops", "/api/shops/**").permitAll()
                         .requestMatchers("/api/users", "/api/users/**").permitAll()
+                        .requestMatchers("/ws-printease", "/ws-printease/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

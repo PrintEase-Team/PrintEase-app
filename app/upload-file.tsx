@@ -30,7 +30,7 @@ export default function UploadFileScreen() {
 
   const [isUploading, setIsUploading] = useState(false);
   const { user_id } = useAuthStore();
-  const { setCurrentOrder, selectedShopId } = useOrderStore();
+  const { currentOrderId, setCurrentOrder, selectedShopId } = useOrderStore();
 
   const handleUploadPress = async () => {
     try {
@@ -51,22 +51,27 @@ export default function UploadFileScreen() {
       setIsUploading(true);
       const fileAsset = result.assets[0];
 
-      // 1. Create Order
+      // 1. Use Existing Order or Create New
       if (!selectedShopId) {
         Alert.alert('Error', 'No shop selected.');
         return;
       }
-      const newOrder = await orderService.createOrder({ student_id: user_id, shop_id: selectedShopId });
+      
+      let orderIdToUse = currentOrderId;
+      if (!orderIdToUse) {
+        const newOrder = await orderService.createOrder({ student_id: user_id, shop_id: selectedShopId });
+        orderIdToUse = newOrder.order_id;
+      }
 
-      // 2. Upload File and link to the new Order
-      const uploadedFile = await fileService.uploadFile(newOrder.order_id, user_id, {
+      // 2. Upload File and link to the Order
+      const uploadedFile = await fileService.uploadFile(orderIdToUse, user_id, {
         uri: fileAsset.uri,
         name: fileAsset.name,
         mimeType: fileAsset.mimeType || 'application/pdf',
       });
 
       // 3. Save order to Zustand
-      setCurrentOrder(newOrder.order_id, uploadedFile.file_id, uploadedFile.page_count || 1);
+      setCurrentOrder(orderIdToUse, uploadedFile.file_id, uploadedFile.page_count || 1);
 
       Alert.alert('Success', 'File uploaded successfully!');
       
@@ -107,22 +112,27 @@ export default function UploadFileScreen() {
       const photo = result.assets[0];
       const fileName = photo.fileName || `photo_${Date.now()}.jpg`;
 
-      // 1. Create a Pending Order
+      // 1. Use Existing Order or Create New
       if (!selectedShopId) {
         Alert.alert('Error', 'No shop selected.');
         return;
       }
-      const newOrder = await orderService.createOrder({ student_id: user_id, shop_id: selectedShopId });
+      
+      let orderIdToUse = currentOrderId;
+      if (!orderIdToUse) {
+        const newOrder = await orderService.createOrder({ student_id: user_id, shop_id: selectedShopId });
+        orderIdToUse = newOrder.order_id;
+      }
 
-      // 2. Upload photo and link to the new Order
-      const uploadedFile = await fileService.uploadFile(newOrder.order_id, user_id, {
+      // 2. Upload photo and link to the Order
+      const uploadedFile = await fileService.uploadFile(orderIdToUse, user_id, {
         uri: photo.uri,
         name: fileName,
         mimeType: photo.mimeType || 'image/jpeg',
       });
 
       // 3. Save order to Zustand
-      setCurrentOrder(newOrder.order_id, uploadedFile.file_id, uploadedFile.page_count || 1);
+      setCurrentOrder(orderIdToUse, uploadedFile.file_id, uploadedFile.page_count || 1);
 
       Alert.alert('Success', 'Photo uploaded successfully!');
       router.push('/print-settings' as any);

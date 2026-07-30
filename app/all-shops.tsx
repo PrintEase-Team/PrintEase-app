@@ -387,7 +387,7 @@ export default function AllShopsScreen() {
       ? calculateDistance(userCoords.latitude, userCoords.longitude, shopLat, shopLng)
       : 0;
 
-    const queueTime = ((queueMap[shop.shop_id] || 0) * 2) + 2;
+    const queueCount = queueMap[shop.shop_id] || 0;
     const walkTime = calculateWalkTime(distanceVal);
 
     return {
@@ -396,7 +396,7 @@ export default function AllShopsScreen() {
       longitude: shopLng,
       calculatedDistance: distanceVal,
       formattedDistance: userCoords ? `${distanceVal.toFixed(1)} km` : `-- km`,
-      queueTime,
+      queueCount,
       walkTime,
     };
   });
@@ -693,7 +693,7 @@ export default function AllShopsScreen() {
                           <Text style={styles.bulletText}> • </Text>
                           <MaterialIcons name="access-time" size={12} color="#9CA3AF" />
                           <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 11, color: '#6B7280', marginLeft: 4 }}>
-                            {isOpenNow ? `~${shop.queueTime} min` : '-- min'}
+                            {isOpenNow ? (shop.queueCount > 0 ? `${shop.queueCount} orders` : 'No queue') : '-- queue'}
                           </Text>
                           <Text style={styles.bulletText}> • </Text>
                           <MaterialIcons name="directions-walk" size={12} color="#9CA3AF" />

@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
-  const { currentOrderId } = useOrderStore();
+  const { currentOrderId, totalAmount } = useOrderStore();
   const [pickupCode, setPickupCode] = useState(['-', '-', '-', '-', '-', '-']);
   const [orderData, setOrderData] = useState<any>(null);
 
@@ -48,7 +48,7 @@ export default function OrderSuccessScreen() {
   const settings = orderData?.printSettings && orderData.printSettings.length > 0 ? orderData.printSettings[0] : null;
 
   const fileName = file?.file_name || 'Document.pdf';
-  const price = orderData?.order?.total_amount != null ? `GHS ${Number(orderData.order.total_amount).toFixed(2)}` : 'GHS --';
+  const price = totalAmount != null ? `GHS ${Number(totalAmount).toFixed(2)}` : 'GHS --';
   const fileType = file?.file_type?.includes('pdf') ? 'PDF' : file?.file_type?.includes('image') ? 'IMG' : 'DOC';
   const pagesInfo = `${file?.page_count ? file.page_count + ' pages • ' : ''}${settings?.copies ? settings.copies + ' copies • ' : ''}${settings?.color_mode === 'Colored' ? 'Color' : 'Black & White'} • ${settings?.sided === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`;
   const dateStr = orderData?.order?.submitted_at ? new Date(orderData.order.submitted_at).toLocaleString() : 'N/A';

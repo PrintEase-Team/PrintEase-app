@@ -2,6 +2,7 @@ import api from './api';
 
 export interface PrintSettingsRequest {
   order_id: string;
+  file_id: string;
   copies: number;
   color_mode: 'Black_and_White' | 'Colored';
   sided: 'Double_sided' | 'Single_sided';

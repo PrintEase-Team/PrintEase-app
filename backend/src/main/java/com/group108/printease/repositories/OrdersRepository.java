@@ -14,4 +14,10 @@ public interface OrdersRepository extends JpaRepository<Orders, UUID> {
 
     @Query("SELECT o FROM Orders o WHERE o.shop.shop_id = :shopId")
     List<Orders> findOrdersByShopId(@Param("shopId") UUID shopId);
+
+    @Query("SELECT o FROM Orders o WHERE o.shop.shop_id = :shopId AND o.status IN ('Pending', 'Printing')")
+    List<Orders> findActiveOrdersByShopId(@Param("shopId") UUID shopId);
+
+    @Query("SELECT o FROM Orders o WHERE o.status = :status AND o.submitted_at < :cutoffDate")
+    List<Orders> findOrdersByStatusAndDateBefore(@Param("status") Orders.order_status status, @Param("cutoffDate") java.time.LocalDateTime cutoffDate);
 }

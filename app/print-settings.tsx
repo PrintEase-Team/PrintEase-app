@@ -16,6 +16,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -48,7 +49,7 @@ export default function PrintSettingsScreen() {
   const [bindingSelected, setBindingSelected] = useState(false);
   const [laminationSelected, setLaminationSelected] = useState(false);
   
-  const { currentOrderId, currentFileId, filePageCount, selectedShopId, setTotalAmount } = useOrderStore();
+  const { currentOrderId, currentFileId, selectedShopId, filePageCount, setFileCost } = useOrderStore();
 
   useEffect(() => {
     const loadData = async () => {
@@ -89,6 +90,43 @@ export default function PrintSettingsScreen() {
               type: fileRes.data.file_type || 'PDF'
             });
           }
+          
+          // Try to fetch existing print settings for editing
+          try {
+            const settingsRes = await api.get(`/printsettings/file/${currentFileId}`);
+            if (settingsRes.data) {
+              const s = settingsRes.data;
+              setCopies(s.copies || 1);
+              setColorMode(s.color_mode === 'Colored' ? 'color' : 'bw');
+              setDoubleSided(s.sided === 'Double_sided');
+              
+              if (s.page_range && s.page_range !== 'All') {
+                setPages('custom');
+                if (s.page_range.includes('-')) {
+                  const parts = s.page_range.split('-');
+                  setStartPage(parts[0]);
+                  setEndPage(parts[1]);
+                } else {
+                  setStartPage(s.page_range);
+                  setEndPage(s.page_range);
+                }
+              } else {
+                setPages('all');
+              }
+              
+              if (s.paper_size) {
+                setPaperSize(s.paper_size.toLowerCase());
+              }
+              if (s.orientation) {
+                setOrientation(s.orientation.toLowerCase());
+              }
+              
+              setBindingSelected(s.requires_binding === true);
+              setLaminationSelected(s.requires_lamination === true);
+            }
+          } catch (err) {
+            // No existing settings found, which is fine (new file)
+          }
         }
       } catch (e) {
         console.error("Error loading data", e);
@@ -100,8 +138,37 @@ export default function PrintSettingsScreen() {
   }, [selectedShopId, currentFileId]);
 
   const handleBack = () => {
-    router.back();
+    Alert.alert(
+      'Discard File?',
+      'You haven\\'t saved print settings for this file yet. Leaving now will delete it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Discard', 
+          style: 'destructive',
+          onPress: async () => {
+            if (currentFileId) {
+              try {
+                await api.delete(`/file/${currentFileId}`);
+              } catch (e) {
+                console.log('Failed to delete file', e);
+              }
+            }
+            router.back();
+          } 
+        }
+      ]
+    );
   };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      handleBack();
+      return true;
+    };
+    BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+  }, [currentFileId]);
 
   const getPagesToPrint = () => {
     if (pages === 'all') return filePageCount;
@@ -112,7 +179,10 @@ export default function PrintSettingsScreen() {
   };
 
   const pagesToPrint = getPagesToPrint();
-  const sheetsUsed = doubleSided ? Math.ceil(pagesToPrint / 2) : pagesToPrint;
+  
+  // Allow doubleSided regardless of page count because PDF page extraction might be missing
+  const effectiveDoubleSided = doubleSided;
+  const sheetsUsed = effectiveDoubleSided ? Math.ceil(pagesToPrint / 2) : pagesToPrint;
   
   const bwPriceForCurrentPaper = paperSize === 'a3' ? shopPricing.a3_bw : paperSize === 'letter' ? shopPricing.letter_bw : shopPricing.a4_bw;
   const colorPriceForCurrentPaper = paperSize === 'a3' ? shopPricing.a3_color : paperSize === 'letter' ? shopPricing.letter_color : shopPricing.a4_color;
@@ -151,9 +221,10 @@ export default function PrintSettingsScreen() {
       // Build payload for print settings using expected names
       const printSettings = {
         order_id: currentOrderId,
+        file_id: currentFileId as string,
         copies: copies,
         color_mode: (colorMode === 'color' ? 'Colored' : 'Black_and_White') as 'Colored' | 'Black_and_White',
-        sided: (doubleSided ? 'Double_sided' : 'Single_sided') as 'Double_sided' | 'Single_sided',
+        sided: (effectiveDoubleSided ? 'Double_sided' : 'Single_sided') as 'Double_sided' | 'Single_sided',
         page_range: pages === 'custom' ? `${startPage || 1}-${endPage || filePageCount}` : 'All',
         paper_size: paperSize,
         orientation: orientation,
@@ -163,7 +234,7 @@ export default function PrintSettingsScreen() {
 
       await printSettingsService.createPrintSettings(printSettings);
 
-      setTotalAmount(totalCost);
+      setFileCost(currentFileId, totalCost);
       router.push('/order-summary' as any);
     } catch (e: any) {
       console.error(e);
@@ -298,46 +369,48 @@ export default function PrintSettingsScreen() {
             >
               <Ionicons name={pages === 'all' ? "radio-button-on" : "radio-button-off"} size={20} color={pages === 'all' ? "#005CE6" : "#D1D5DB"} />
               <View style={{marginLeft: 12}}>
-                <Text style={[styles.optionTextDetailed, pages === 'all' && styles.optionTextSelected]}>All Pages (1 - {filePageCount})</Text>
+                <Text style={[styles.optionTextDetailed, pages === 'all' && styles.optionTextSelected]}>All Pages {filePageCount > 1 ? `(1 - ${filePageCount})` : `(1 page)`}</Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.stackedOptionCard, pages === 'custom' && styles.stackedOptionCardSelected, {borderBottomWidth: 0}]}
-              onPress={() => setPages('custom')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name={pages === 'custom' ? "radio-button-on" : "radio-button-off"} size={20} color={pages === 'custom' ? "#005CE6" : "#D1D5DB"} />
-              <View style={{marginLeft: 12, flex: 1}}>
-                <Text style={[styles.optionTextDetailed, pages === 'custom' && styles.optionTextSelected]}>Custom Range</Text>
-                {pages === 'custom' ? (
-                  <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 8}}>
-                    <TextInput
-                      style={styles.pageInput}
-                      placeholder="Start"
-                      placeholderTextColor="#9CA3AF"
-                      value={startPage}
-                      onChangeText={setStartPage}
-                      keyboardType="numeric"
-                      maxLength={4}
-                    />
-                    <Text style={{marginHorizontal: 8, color: '#9CA3AF'}}>-</Text>
-                    <TextInput
-                      style={styles.pageInput}
-                      placeholder="End"
-                      placeholderTextColor="#9CA3AF"
-                      value={endPage}
-                      onChangeText={setEndPage}
-                      keyboardType="numeric"
-                      maxLength={4}
-                    />
-                  </View>
-                ) : (
-                  <Text style={styles.optionPriceText}>Select specific pages</Text>
-                )}
-              </View>
-              <Feather name="chevron-right" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+            {filePageCount > 1 && (
+              <TouchableOpacity
+                style={[styles.stackedOptionCard, pages === 'custom' && styles.stackedOptionCardSelected, {borderBottomWidth: 0}]}
+                onPress={() => setPages('custom')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name={pages === 'custom' ? "radio-button-on" : "radio-button-off"} size={20} color={pages === 'custom' ? "#005CE6" : "#D1D5DB"} />
+                <View style={{marginLeft: 12, flex: 1}}>
+                  <Text style={[styles.optionTextDetailed, pages === 'custom' && styles.optionTextSelected]}>Custom Range</Text>
+                  {pages === 'custom' ? (
+                    <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 8}}>
+                      <TextInput
+                        style={styles.pageInput}
+                        placeholder="Start"
+                        placeholderTextColor="#9CA3AF"
+                        value={startPage}
+                        onChangeText={setStartPage}
+                        keyboardType="numeric"
+                        maxLength={4}
+                      />
+                      <Text style={{marginHorizontal: 8, color: '#9CA3AF'}}>-</Text>
+                      <TextInput
+                        style={styles.pageInput}
+                        placeholder="End"
+                        placeholderTextColor="#9CA3AF"
+                        value={endPage}
+                        onChangeText={setEndPage}
+                        keyboardType="numeric"
+                        maxLength={4}
+                      />
+                    </View>
+                  ) : (
+                    <Text style={styles.optionPriceText}>Select specific pages</Text>
+                  )}
+                </View>
+                <Feather name="chevron-right" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -419,27 +492,27 @@ export default function PrintSettingsScreen() {
 
         {/* Double-sided Printing */}
         <View style={styles.section}>
-          <View style={styles.rowSettingHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Double-sided Printing</Text>
-              <Text style={styles.sectionSubtitleText}>Print on both sides of the paper</Text>
+            <View style={styles.rowSettingHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Double-sided Printing</Text>
+                <Text style={styles.sectionSubtitleText}>Print on both sides of the paper</Text>
+              </View>
+              <Switch
+                value={effectiveDoubleSided}
+                onValueChange={setDoubleSided}
+                trackColor={{ false: '#E5E7EB', true: '#005CE6' }}
+                thumbColor={'#FFFFFF'}
+                ios_backgroundColor="#E5E7EB"
+                style={{ transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }] }}
+              />
             </View>
-            <Switch
-              value={doubleSided}
-              onValueChange={setDoubleSided}
-              trackColor={{ false: '#E5E7EB', true: '#005CE6' }}
-              thumbColor={'#FFFFFF'}
-              ios_backgroundColor="#E5E7EB"
-              style={{ transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }] }}
-            />
+            {effectiveDoubleSided && savingsAmount > 0 && (
+              <View style={styles.savingsBadge}>
+                <Ionicons name="leaf" size={14} color="#10B981" />
+                <Text style={styles.savingsBadgeText}>You save GH¢{savingsAmount.toFixed(2)} with double-sided</Text>
+              </View>
+            )}
           </View>
-          {doubleSided && savingsAmount > 0 && (
-            <View style={styles.savingsBadge}>
-              <Ionicons name="leaf" size={14} color="#10B981" />
-              <Text style={styles.savingsBadgeText}>You save GH¢{savingsAmount.toFixed(2)} with double-sided</Text>
-            </View>
-          )}
-        </View>
         {/* Lamination */}
         {shopPricing.supports_lamination && (
           <View style={styles.section}>

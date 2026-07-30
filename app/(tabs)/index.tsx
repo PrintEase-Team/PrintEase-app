@@ -25,6 +25,8 @@ import api, { API_BASE } from '../../services/api';
 import { calculateDistance, calculateWalkTime, getCurrentDeviceLocation } from '../../services/locationService';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useOrderStore } from '../../store/useOrderStore';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 const { width } = Dimensions.get('window');
 
@@ -123,7 +125,7 @@ export default function HomeScreen() {
     setLiveLocation,
     clearLiveLocation
   } = useAuthStore();
-  const { setSelectedShopId } = useOrderStore();
+  const { setSelectedShopId, currentOrderId, clearCurrentOrder } = useOrderStore();
   const [activeOrder, setActiveOrder] = React.useState<any>(null);
   const [userName, setUserName] = React.useState<string>('Student');
   const [hasUnread, setHasUnread] = React.useState(false);
@@ -195,6 +197,34 @@ export default function HomeScreen() {
     React.useCallback(() => {
       fetchAllData();
     }, [user_id]));
+
+  React.useEffect(() => {
+    if (!user_id) return;
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${API_BASE.replace('/api', '')}/ws-printease`),
+      debug: function (str) {
+        // Optional debug logging
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    client.onConnect = function () {
+      client.subscribe('/topic/student/' + user_id, (message) => {
+        if (message.body) {
+          fetchAllData();
+        }
+      });
+    };
+
+    client.activate();
+
+    return () => {
+      client.deactivate();
+    };
+  }, [user_id]);
 
   const handleToggleLiveLocation = async () => {
     if (isUsingLiveLocation) {
@@ -281,7 +311,34 @@ export default function HomeScreen() {
   const handleUploadPress = () => {
     if (defaultShopId) {
       setSelectedShopId(defaultShopId);
-      router.push('/upload-file' as any);
+      
+      if (currentOrderId) {
+        Alert.alert(
+          'Incomplete Order',
+          'You have an incomplete print order in progress. Would you like to resume it, or discard it and start fresh?',
+          [
+            {
+              text: 'Discard & Start Fresh',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await api.delete(`/orders/${currentOrderId}`);
+                } catch (e) {
+                  console.log('Failed to delete old order', e);
+                }
+                clearCurrentOrder();
+                router.push('/upload-file' as any);
+              }
+            },
+            {
+              text: 'Resume',
+              onPress: () => router.push('/order-summary' as any)
+            }
+          ]
+        );
+      } else {
+        router.push('/upload-file' as any);
+      }
     } else {
       Alert.alert(
         'No Shop Selected',
@@ -509,8 +566,10 @@ export default function HomeScreen() {
                     <MaterialIcons name="access-time" size={14} color="#9CA3AF" />
                     <Text style={{ fontFamily: 'Poppins-Regular', fontSize: 12, color: '#6B7280', marginLeft: 4 }}>
                       {getShopStatus(defaultShop).includes('Closed')
-                        ? '-- min queue'
-                        : `~${((queueMap[defaultShopId || ''] || 0) * 2) + 2} min queue`}
+                        ? 'No queue'
+                        : queueMap[defaultShopId || ''] 
+                          ? `${queueMap[defaultShopId || '']} pending orders` 
+                          : 'No queue'}
                     </Text>
                   </View>
                 </View>

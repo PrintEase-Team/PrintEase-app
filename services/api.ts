@@ -34,4 +34,24 @@ api.interceptors.request.use(
   },
 );
 
+// Response interceptor to handle 401 Unauthorized globally
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token is likely expired or invalid
+      console.warn("401 Unauthorized received. Logging out user.");
+
+      // Clear token and user state
+      const { useAuthStore } = require("@/store/useAuthStore");
+      await useAuthStore.getState().logout();
+
+      // Redirect to login screen
+      const { router } = require("expo-router");
+      router.replace("/login");
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
