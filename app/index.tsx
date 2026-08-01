@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useOrderStore } from '@/store/useOrderStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -17,6 +18,7 @@ export default function SplashScreen() {
     const init = async () => {
       try {
         await useAuthStore.getState().hydrate();
+        await useOrderStore.getState().hydrate();
       } catch (e) {
         console.error("Hydration error:", e);
       }

@@ -11,6 +11,7 @@ export interface PrintSettingsRequest {
   orientation?: string;
   requires_binding?: boolean;
   requires_lamination?: boolean;
+  total_cost?: number;
 }
 
 export interface PrintSettingsResponse extends PrintSettingsRequest {

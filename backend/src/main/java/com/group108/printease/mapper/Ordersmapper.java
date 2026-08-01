@@ -24,8 +24,9 @@ public class Ordersmapper {
                 null, // items
                 orders.getStudent_id() != null ? orders.getStudent_id().getFull_name() : null, // student_name
                 orders.getStudent_id() != null ? orders.getStudent_id().getPhone_number() : null, // student_phone
-                null, // shop_name
-                null,  // shop_location
+                orders.getShop() != null ? orders.getShop().getShop_name() : null, // shop_name
+                orders.getShop() != null ? orders.getShop().getLocation() : null,  // shop_location
+                orders.getShop() != null ? orders.getShop().getProfile_picture_url() : null, // shop_profile_url
                 orders.is_rated() // is_rated
         );
     }

@@ -109,22 +109,50 @@ export default function OrderDetails() {
           </div>
 
           <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <FileText className={styles.cardHeaderIcon} size={20} />
-              Document Information
-            </div>
+            {(() => {
+              const isMultiFile = order.files && order.files.length > 1;
+              const firstFileType = (order.files?.[0]?.file_type || '').toLowerCase();
+              const isPdf = firstFileType.includes('pdf');
+              const isImg = firstFileType.includes('image');
 
-            <div className={styles.docInfoItem}>
-              <div className={styles.docInfoIcon}>
-                <FileText size={24} color="#ef4444" />
-              </div>
-              <div className={styles.infoBlock} style={{ marginBottom: 0 }}>
-                <span className={styles.infoLabel}>{order.files && order.files.length > 1 ? 'Files' : 'File Name'}</span>
-                <span className={styles.infoValue} style={{ wordBreak: 'break-all' }}>
-                  {order.files && order.files.length > 1 ? `Multiple Files (${order.files.length})` : (order.files?.[0]?.file_name || 'N/A')}
-                </span>
-              </div>
-            </div>
+              return (
+                <>
+                  <div className={styles.cardHeader}>
+                    {isMultiFile ? (
+                      <Copy className={styles.cardHeaderIcon} size={20} style={{ color: '#005CE6' }} />
+                    ) : isImg ? (
+                      <Image className={styles.cardHeaderIcon} size={20} style={{ color: '#8b5cf6' }} />
+                    ) : isPdf ? (
+                      <FileText className={styles.cardHeaderIcon} size={20} style={{ color: '#ef4444' }} />
+                    ) : (
+                      <FileText className={styles.cardHeaderIcon} size={20} style={{ color: '#3b82f6' }} />
+                    )}
+                    Document Information
+                  </div>
+
+                  <div className={styles.docInfoItem}>
+                    <div 
+                      className={styles.docInfoIcon}
+                      style={{ 
+                        backgroundColor: isMultiFile ? '#005CE6' : (isPdf ? '#ef4444' : (isImg ? '#8b5cf6' : '#3b82f6')),
+                        color: '#ffffff'
+                      }}
+                    >
+                      {isMultiFile && <Copy size={20} color="#ffffff" />}
+                      {!isMultiFile && isPdf && <FileText size={20} color="#ffffff" />}
+                      {!isMultiFile && isImg && <Image size={20} color="#ffffff" />}
+                      {!isMultiFile && !isPdf && !isImg && <FileText size={20} color="#ffffff" />}
+                    </div>
+                    <div className={styles.infoBlock} style={{ marginBottom: 0 }}>
+                      <span className={styles.infoLabel}>{isMultiFile ? 'Files' : 'File Name'}</span>
+                      <span className={styles.infoValue} style={{ wordBreak: 'break-all' }}>
+                        {isMultiFile ? `Multiple Files (${order.files.length})` : (order.files?.[0]?.file_name || 'N/A')}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             <div className={styles.docDetailsList}>
               <div className={styles.infoBlock}>
@@ -147,13 +175,22 @@ export default function OrderDetails() {
         <div className={styles.middleCol}>
           {order.files && order.files.length > 0 ? (
             order.files.map((file: any, index: number) => {
-              const setting = order.printSettings?.find((s: any) => s.file_id?.file_id === file.file_id) || order.printSettings?.[index] || {};
-              
+              const setting = order.printSettings?.find((s: any) => (s.file_id?.file_id || s.file_id) === file.file_id) || {};
+              const fileType = (file.file_type || '').toLowerCase();
+              const isFilePdf = fileType.includes('pdf');
+              const isFileImg = fileType.includes('image');
+
               return (
                 <div key={file.file_id} style={{ marginBottom: 32 }}>
                   <div className={styles.card}>
                     <div className={styles.cardHeader}>
-                      <FileText className={styles.cardHeaderIcon} size={20} />
+                      {isFileImg ? (
+                        <Image className={styles.cardHeaderIcon} size={20} color="#8b5cf6" />
+                      ) : isFilePdf ? (
+                        <FileText className={styles.cardHeaderIcon} size={20} color="#ef4444" />
+                      ) : (
+                        <FileText className={styles.cardHeaderIcon} size={20} color="#3b82f6" />
+                      )}
                       Document {index + 1}: {file.file_name}
                     </div>
 

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SockJS from 'sockjs-client';
-import api from '../services/api';
+import api, { API_BASE } from '../services/api';
 import { useOrderStore } from '../store/useOrderStore';
 
 export default function OrderDetailsScreen() {
@@ -244,48 +245,81 @@ export default function OrderDetailsScreen() {
         </View>
 
         {/* Print Shop Section */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Print Shop</Text>
-          <View style={styles.row}>
-            <View style={styles.shopIconContainer}>
-              <Feather name="home" size={20} color="#005CE6" />
+        {(() => {
+          const rawPic = orderData?.shop?.profile_picture_url || orderData?.shop_profile_url;
+          const shopProfileUrl = rawPic ? (rawPic.startsWith('http') ? rawPic : `${API_BASE}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : null;
+
+          return (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Print Shop</Text>
+              <View style={styles.row}>
+                <View style={styles.shopIconContainer}>
+                  {shopProfileUrl ? (
+                    <Image
+                      source={{ uri: shopProfileUrl }}
+                      style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Feather name="home" size={22} color="#005CE6" />
+                  )}
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.boldText}>{shopName}</Text>
+                  <Text style={styles.subText}>{shopLocation}</Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.textContainer}>
-              <Text style={styles.boldText}>{shopName}</Text>
-              <Text style={styles.subText}>{shopLocation}</Text>
-            </View>
-          </View>
-        </View>
+          );
+        })()}
 
         {/* Document Details Section */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Document Details</Text>
 
-          {(orderData?.items && orderData.items.length > 0) ? orderData.items.map((item: any, index: number) => {
-            const isPdf = item.file_type?.toLowerCase().includes('pdf');
-            const itemPagesInfo = `${item.page_count ? item.page_count + ' pages • ' : ''}${item.copies ? item.copies + ' copies • ' : ''}${item.color_mode === 'Colored' ? 'Color' : 'Black & White'} • ${item.sided === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`;
+          {(() => {
+            const getFileBadge = (type: string) => {
+              const t = (type || '').toLowerCase();
+              if (t === 'batch') {
+                return { bg: '#FEF3C7', icon: <Feather name="copy" size={20} color="#F59E0B" /> };
+              }
+              if (t === 'img' || t.includes('image') || t.includes('jpg') || t.includes('png') || t.includes('jpeg')) {
+                return { bg: '#DBEAFE', icon: <Feather name="image" size={20} color="#3B82F6" /> };
+              }
+              return { bg: '#FEE2E2', icon: <Feather name="file-text" size={20} color="#EF4444" /> };
+            };
+
+            if (orderData?.items && orderData.items.length > 0) {
+              return orderData.items.map((item: any, index: number) => {
+                const badge = getFileBadge(item.file_type || 'pdf');
+                const itemPagesInfo = `${item.page_count ? item.page_count + ' pages • ' : ''}${item.copies ? item.copies + ' copies • ' : ''}${item.color_mode === 'Colored' ? 'Color' : 'Black & White'} • ${item.sided === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`;
+                return (
+                  <View key={item.file_id || index} style={[styles.row, { marginBottom: index < orderData.items.length - 1 ? 16 : 0 }]}>
+                    <View style={[styles.fileIconContainer, { backgroundColor: badge.bg }]}>
+                      {badge.icon}
+                    </View>
+                    <View style={styles.textContainer}>
+                      <Text style={styles.boldText} numberOfLines={1}>{item.document_name || 'Document'}</Text>
+                      <Text style={styles.subText}>{itemPagesInfo}</Text>
+                    </View>
+                  </View>
+                );
+              });
+            }
+
+            const badge = getFileBadge(fileType);
             return (
-              <View key={item.file_id || index} style={[styles.row, { marginBottom: index < orderData.items.length - 1 ? 16 : 0 }]}>
-                <View style={[styles.fileIconContainer, { backgroundColor: isPdf ? '#EF4444' : '#2563EB' }]}>
-                  <Text style={styles.fileTypeText}>{isPdf ? 'PDF' : 'W'}</Text>
+              <View style={styles.row}>
+                <View style={[styles.fileIconContainer, { backgroundColor: badge.bg }]}>
+                  {badge.icon}
                 </View>
                 <View style={styles.textContainer}>
-                  <Text style={styles.boldText} numberOfLines={1}>{item.document_name || 'Document'}</Text>
-                  <Text style={styles.subText}>{itemPagesInfo}</Text>
+                  <Text style={styles.boldText} numberOfLines={1}>{documentName}</Text>
+                  <Text style={styles.subText}>{pagesInfo}</Text>
                 </View>
               </View>
             );
-          }) : (
-            <View style={styles.row}>
-              <View style={[styles.fileIconContainer, { backgroundColor: fileType === 'pdf' ? '#EF4444' : (fileType === 'batch' ? '#F59E0B' : '#2563EB') }]}>
-                <Text style={styles.fileTypeText}>{fileType === 'batch' ? 'DOCS' : (fileType === 'pdf' ? 'PDF' : 'W')}</Text>
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.boldText} numberOfLines={1}>{documentName}</Text>
-                <Text style={styles.subText}>{pagesInfo}</Text>
-              </View>
-            </View>
-          )}
+          })()}
 
           <View style={styles.divider} />
 
@@ -422,18 +456,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shopIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: '#F3F8FE',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   fileIconContainer: {
-    width: 36,
-    height: 40,
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

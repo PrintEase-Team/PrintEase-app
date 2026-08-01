@@ -308,11 +308,26 @@ export default function HomeScreen() {
     return shops.find(s => s.shop_id === defaultShopId);
   }, [shops, defaultShopId]);
 
-  const handleUploadPress = () => {
+  const handleUploadPress = async () => {
     if (defaultShopId) {
       setSelectedShopId(defaultShopId);
       
       if (currentOrderId) {
+        try {
+          const res = await api.get(`/orders/${currentOrderId}`);
+          if (res.data && res.data.status && res.data.status !== 'Unpaid') {
+            // Order is already paid / processed! Clear local draft ID and start fresh
+            clearCurrentOrder();
+            router.push('/upload-file' as any);
+            return;
+          }
+        } catch (e) {
+          // If order no longer exists, clear local draft ID and start fresh
+          clearCurrentOrder();
+          router.push('/upload-file' as any);
+          return;
+        }
+
         Alert.alert(
           'Incomplete Order',
           'You have an incomplete print order in progress. Would you like to resume it, or discard it and start fresh?',
@@ -403,18 +418,19 @@ export default function HomeScreen() {
         <View style={styles.locationHeaderRow}>
           <View style={styles.locationHeaderLeft}>
             <Ionicons name="location-outline" size={26} color="#111827" style={{ marginTop: 2 }} />
-            <View style={{ flex: 1, marginLeft: 12, marginRight: 16 }}>
+            <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
               <Text style={styles.locationHeaderText}>{activeLocationName || 'Select Location'}</Text>
               <Text style={styles.locationSubText}>{isUsingLiveLocation ? 'Current location' : 'Default location'}</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={handleToggleLiveLocation} style={styles.gpsToggleBtn}>
-            <MaterialCommunityIcons name="target" size={16} color="#005CE6" />
+          <TouchableOpacity onPress={handleToggleLiveLocation} style={styles.gpsToggleBtn} activeOpacity={0.8}>
+            <MaterialCommunityIcons name="target" size={16} color="#005CE6" style={{ marginRight: 4 }} />
             <Text style={styles.gpsToggleText}>{isUsingLiveLocation ? 'Use default' : 'Use live'}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.locationDivider} />
 
+        {/* Active Order Card */}
         {activeOrder && (
           <TouchableOpacity
             onPress={() => router.push({
@@ -433,25 +449,35 @@ export default function HomeScreen() {
                 rawId: activeOrder.rawId,
               }
             } as any)}
-            activeOpacity={0.8}
-            style={{ marginTop: 24, padding: 16, backgroundColor: '#F3F8FE', borderRadius: 16, borderWidth: 1, borderColor: '#EAF1FC' }}
+            activeOpacity={0.85}
+            style={styles.activeOrderCard}
           >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontFamily: 'Poppins-Bold', fontSize: 16, color: '#111827' }}>Active Order</Text>
-              <View style={{ backgroundColor: '#005CE6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                <Text style={{ color: '#fff', fontSize: 12, fontFamily: 'Poppins-Bold' }}>{activeOrder.status}</Text>
+            <View style={styles.activeOrderTopRow}>
+              <View style={styles.activeOrderIconContainer}>
+                <Feather name="file-text" size={22} color="#005CE6" />
+              </View>
+              <View style={styles.activeOrderTextContainer}>
+                <Text style={styles.activeOrderTitle}>Active Order</Text>
+                <Text style={styles.activeOrderId}>Order ID: {activeOrder.id.replace('#', '')}</Text>
+              </View>
+              <View style={styles.activeOrderStatusBadge}>
+                <Text style={styles.activeOrderStatusText}>{activeOrder.status}</Text>
               </View>
             </View>
-            <Text style={{ fontFamily: 'Poppins-Medium', fontSize: 14, color: '#4B5563', marginBottom: 4 }}>
-              Order ID: {activeOrder.id}
-            </Text>
+
             {activeOrder.status === 'Ready' && (
-              <Text style={{ fontFamily: 'Poppins-Bold', fontSize: 16, color: '#10B981', marginTop: 8 }}>
-                Pickup Code: {activeOrder.pickupCode}
-              </Text>
+              <View style={{ marginTop: 10, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#EAFCEF', borderRadius: 8, alignSelf: 'flex-start' }}>
+                <Text style={{ fontFamily: 'Poppins-Bold', fontSize: 13, color: '#10B981' }}>
+                  Pickup Code: {activeOrder.pickupCode}
+                </Text>
+              </View>
             )}
-            <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Poppins-SemiBold', fontSize: 14, color: '#005CE6' }}>View order details &rarr;</Text>
+
+            <View style={styles.activeOrderDivider} />
+
+            <View style={styles.activeOrderBottomRow}>
+              <Text style={styles.activeOrderLinkText}>View order details &rarr;</Text>
+              <Feather name="chevron-right" size={18} color="#6B7280" />
             </View>
           </TouchableOpacity>
         )}
@@ -782,7 +808,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 24,
     marginTop: 24,
     marginBottom: 20,
   },
@@ -823,6 +848,72 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F3F4F6',
     marginBottom: 24,
+  },
+  activeOrderCard: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  activeOrderTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activeOrderIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activeOrderTextContainer: {
+    flex: 1,
+  },
+  activeOrderTitle: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Bold',
+    color: '#111827',
+  },
+  activeOrderId: {
+    fontSize: 13,
+    fontFamily: 'Poppins-Regular',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  activeOrderStatusBadge: {
+    backgroundColor: '#005CE6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  activeOrderStatusText: {
+    fontSize: 13,
+    fontFamily: 'Poppins-Bold',
+    color: '#ffffff',
+  },
+  activeOrderDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 14,
+  },
+  activeOrderBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activeOrderLinkText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#005CE6',
   },
   greeting: {
     fontSize: 22,

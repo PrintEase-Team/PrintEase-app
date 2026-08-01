@@ -1,8 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { printSettingsService } from '@/services/printSettingsService';
 import api from '@/services/api';
 import { useOrderStore } from '@/store/useOrderStore';
@@ -48,8 +48,8 @@ export default function PrintSettingsScreen() {
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(true);
   const [bindingSelected, setBindingSelected] = useState(false);
   const [laminationSelected, setLaminationSelected] = useState(false);
-  
-  const { currentOrderId, currentFileId, selectedShopId, filePageCount, setFileCost } = useOrderStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const { currentOrderId, currentFileId, selectedShopId, filePageCount, setFileCost, removeFileCost, clearCurrentOrder } = useOrderStore();
 
   useEffect(() => {
     const loadData = async () => {
@@ -95,6 +95,7 @@ export default function PrintSettingsScreen() {
           try {
             const settingsRes = await api.get(`/printsettings/file/${currentFileId}`);
             if (settingsRes.data) {
+              setIsEditing(true);
               const s = settingsRes.data;
               setCopies(s.copies || 1);
               setColorMode(s.color_mode === 'Colored' ? 'color' : 'bw');
@@ -138,6 +139,11 @@ export default function PrintSettingsScreen() {
   }, [selectedShopId, currentFileId]);
 
   const handleBack = () => {
+    if (isEditing) {
+      router.back();
+      return;
+    }
+    
     Alert.alert(
       'Discard File?',
       "You haven't saved print settings for this file yet. Leaving now will delete it.",
@@ -150,6 +156,17 @@ export default function PrintSettingsScreen() {
             if (currentFileId) {
               try {
                 await api.delete(`/file/${currentFileId}`);
+                removeFileCost(currentFileId);
+                
+                if (currentOrderId) {
+                  const orderRes = await api.get(`/orders/${currentOrderId}/full`);
+                  if (orderRes.data && (!orderRes.data.files || orderRes.data.files.length === 0)) {
+                    await api.delete(`/orders/${currentOrderId}`);
+                    clearCurrentOrder();
+                    router.replace('/(tabs)' as any);
+                    return;
+                  }
+                }
               } catch (e) {
                 console.log('Failed to delete file', e);
               }
@@ -161,14 +178,16 @@ export default function PrintSettingsScreen() {
     );
   };
 
-  useEffect(() => {
-    const onBackPress = () => {
-      handleBack();
-      return true;
-    };
-    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => subscription.remove();
-  }, [currentFileId]);
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [currentFileId, isEditing, currentOrderId])
+  );
 
   const getPagesToPrint = () => {
     if (pages === 'all') return filePageCount;
@@ -229,7 +248,8 @@ export default function PrintSettingsScreen() {
         paper_size: paperSize,
         orientation: orientation,
         requires_binding: bindingSelected,
-        requires_lamination: laminationSelected
+        requires_lamination: laminationSelected,
+        total_cost: totalCost
       };
 
       await printSettingsService.createPrintSettings(printSettings);

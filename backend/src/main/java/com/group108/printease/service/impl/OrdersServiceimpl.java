@@ -186,18 +186,26 @@ public class OrdersServiceimpl implements OrdersService {
 
         OrdersDto responseDto = Ordersmapper.mapToOrdersDto(savedOrder);
         
-        // Broadcast updates to shop and student (After Commit)
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                if (orders.getShop() != null) {
-                    messagingTemplate.convertAndSend("/topic/shop/" + orders.getShop().getShop_id(), responseDto);
-                }
-                if (orders.getStudent_id() != null) {
-                    messagingTemplate.convertAndSend("/topic/student/" + orders.getStudent_id().getUser_id(), responseDto);
-                }
+        // Broadcast updates to shop and student safely
+        Runnable broadcastTask = () -> {
+            if (orders.getShop() != null) {
+                messagingTemplate.convertAndSend("/topic/shop/" + orders.getShop().getShop_id(), responseDto);
             }
-        });
+            if (orders.getStudent_id() != null) {
+                messagingTemplate.convertAndSend("/topic/student/" + orders.getStudent_id().getUser_id(), responseDto);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    broadcastTask.run();
+                }
+            });
+        } else {
+            broadcastTask.run();
+        }
 
         return responseDto;
     }
@@ -218,6 +226,7 @@ public class OrdersServiceimpl implements OrdersService {
         if (order.getShop() != null) {
             dto.setShop_name(order.getShop().getShop_name());
             dto.setShop_location(order.getShop().getLocation());
+            dto.setShop_profile_url(order.getShop().getProfile_picture_url());
         }
 
         List<com.group108.printease.entities.Payments> payments = paymentRepository.findByOrder(order);

@@ -19,6 +19,7 @@ public class PrintSettingsmapper {
                 printSettings.getOrientation(),
                 printSettings.getRequires_binding(),
                 printSettings.getRequires_lamination(),
+                printSettings.getTotal_cost(),
                 printSettings.getCreated_at()
         );
     }
@@ -36,6 +37,7 @@ public class PrintSettingsmapper {
         if (printSettingsDto.getOrientation() != null) printSettings.setOrientation(printSettingsDto.getOrientation());
         if (printSettingsDto.getRequires_binding() != null) printSettings.setRequires_binding(printSettingsDto.getRequires_binding());
         if (printSettingsDto.getRequires_lamination() != null) printSettings.setRequires_lamination(printSettingsDto.getRequires_lamination());
+        if (printSettingsDto.getTotal_cost() != null) printSettings.setTotal_cost(printSettingsDto.getTotal_cost());
         return printSettings;
     }
 }

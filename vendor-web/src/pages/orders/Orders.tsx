@@ -265,15 +265,17 @@ export default function Orders() {
                       </div>
                       <div className={styles.docInfo}>
                         <span>{order.docName}</span>
-                        <span className={styles.subText}>{order.pages} pages</span>
+                        <span className={styles.subText}>{order.pages} pages • {order.copies} copies</span>
                       </div>
                     </div>
                   </td>
                   <td>{order.copies}</td>
                   <td>{order.price}</td>
                   <td>
-                    <span className={`${styles.statusBadge} ${styles[order.status]}`}>
-                      {order.status.toUpperCase()}
+                    <span className={`${styles.statusBadge} ${styles[order.status.toLowerCase()] || styles.pending}`}>
+                      {order.status.toLowerCase() === 'active' || order.status.toLowerCase() === 'unpaid' 
+                        ? 'PENDING' 
+                        : (order.status.toLowerCase() === 'collected' ? 'COMPLETED' : order.status.toUpperCase())}
                     </span>
                   </td>
                   <td>

@@ -33,5 +33,6 @@ public class OrdersDto {
     private String student_phone;
     private String shop_name;
     private String shop_location;
+    private String shop_profile_url;
     private Boolean is_rated;
 }

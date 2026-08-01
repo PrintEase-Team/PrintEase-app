@@ -25,5 +25,6 @@ public class PrintSettingsDto {
     private String orientation;
     private Boolean requires_binding;
     private Boolean requires_lamination;
+    private Double total_cost;
     private LocalDateTime created_at;
 }

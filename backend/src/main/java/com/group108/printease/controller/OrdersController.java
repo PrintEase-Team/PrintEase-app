@@ -15,6 +15,7 @@ import com.group108.printease.repositories.OrdersRepository;
 import com.group108.printease.repositories.UsersRepository;
 import com.group108.printease.repositories.FilesRepository;
 import com.group108.printease.repositories.PrintSettingsRepository;
+import com.group108.printease.mapper.PrintSettingsmapper;
 
 @CrossOrigin("*")
 @RestController
@@ -51,7 +52,9 @@ public class OrdersController {
         response.setOrder(order);
         response.setStudent(order.getStudent_id());
         response.setFiles(filesRepository.findByOrder(order));
-        response.setPrintSettings(printSettingsRepository.findByOrder(order));
+        response.setPrintSettings(printSettingsRepository.findByOrder(order).stream()
+            .map(PrintSettingsmapper::mapToPrintSettingsDto)
+            .toList());
         
         return ResponseEntity.ok(response);
     }

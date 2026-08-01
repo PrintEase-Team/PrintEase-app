@@ -375,17 +375,15 @@ export default function OrdersScreen() {
                         styles.fileTypeBadge,
                         {
                           backgroundColor:
-                            order.fileType === 'pdf' ? '#FEE2E2' : 
                             order.fileType === 'batch' ? '#FEF3C7' :
-                            order.fileType === 'img' ? '#DBEAFE' : '#EDE9FE',
+                            order.fileType === 'img' ? '#DBEAFE' : '#FEE2E2',
                         },
                       ]}
                     >
-                      {order.fileType === 'pdf' && <Feather name="file-text" size={20} color="#EF4444" />}
                       {order.fileType === 'batch' && <Feather name="copy" size={20} color="#F59E0B" />}
                       {order.fileType === 'img' && <Feather name="image" size={20} color="#3B82F6" />}
-                      {order.fileType !== 'img' && order.fileType !== 'pdf' && order.fileType !== 'batch' && (
-                        <Feather name="file-text" size={20} color="#8B5CF6" />
+                      {order.fileType !== 'img' && order.fileType !== 'batch' && (
+                        <Feather name="file-text" size={20} color="#EF4444" />
                       )}
                     </View>
                     <View style={styles.docDetailsContainer}>

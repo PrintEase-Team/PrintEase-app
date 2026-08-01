@@ -1,24 +1,26 @@
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useOrderStore } from '@/store/useOrderStore';
-import api from '@/services/api';
+import api, { API_BASE } from '@/services/api';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
-  const { currentOrderId, totalAmount } = useOrderStore();
+  const params = useLocalSearchParams();
+  const { currentOrderId, totalAmount, clearCurrentOrder } = useOrderStore();
+  const targetOrderId = (params.orderId as string) || currentOrderId;
   const [pickupCode, setPickupCode] = useState(['-', '-', '-', '-', '-', '-']);
   const [orderData, setOrderData] = useState<any>(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
-      if (currentOrderId) {
+      if (targetOrderId) {
         try {
-          const res = await api.get(`/orders/${currentOrderId}/full`);
+          const res = await api.get(`/orders/${targetOrderId}/full`);
           if (res.data) {
              setOrderData(res.data);
              if (res.data.order && res.data.order.pickup_code) {
@@ -32,28 +34,34 @@ export default function OrderSuccessScreen() {
       }
     };
     fetchOrder();
-  }, [currentOrderId]);
+  }, [targetOrderId]);
 
   const handleViewOrders = () => {
-    // Navigate to the Orders Tab
+    clearCurrentOrder();
     router.replace('/(tabs)/orders' as any);
   };
 
   const handleBackHome = () => {
-    // Navigate to the Home Tab
+    clearCurrentOrder();
     router.replace('/(tabs)' as any);
   };
 
-  const file = orderData?.files && orderData.files.length > 0 ? orderData.files[0] : null;
-  const settings = orderData?.printSettings && orderData.printSettings.length > 0 ? orderData.printSettings[0] : null;
+  const files = orderData?.files || [];
+  const printSettings = orderData?.printSettings || [];
+  const isMultiFile = files.length > 1;
 
-  const fileName = file?.file_name || 'Document.pdf';
-  const price = totalAmount != null ? `GHS ${Number(totalAmount).toFixed(2)}` : 'GHS --';
-  const fileType = file?.file_type?.includes('pdf') ? 'PDF' : file?.file_type?.includes('image') ? 'IMG' : 'DOC';
-  const pagesInfo = `${file?.page_count ? file.page_count + ' pages • ' : ''}${settings?.copies ? settings.copies + ' copies • ' : ''}${settings?.color_mode === 'Colored' ? 'Color' : 'Black & White'} • ${settings?.sided === 'Double_sided' ? 'Double Sided' : 'Single Sided'}`;
+  const firstFile = files.length > 0 ? files[0] : null;
+  const firstSettings = printSettings.length > 0 ? printSettings[0] : null;
+
+  const calculatedPrice = printSettings.reduce((sum: number, s: any) => sum + (s.total_cost || 0), 0);
+  const price = totalAmount != null ? `GHS ${Number(totalAmount).toFixed(2)}` : (calculatedPrice > 0 ? `GHS ${calculatedPrice.toFixed(2)}` : 'GHS --');
   const dateStr = orderData?.order?.submitted_at ? new Date(orderData.order.submitted_at).toLocaleString() : 'N/A';
   const shopName = orderData?.order?.shop?.shop_name || 'My Print Shop';
   const shopLocation = orderData?.order?.shop?.location || '...';
+  const totalPagesCount = files.reduce((sum: number, f: any) => sum + (f.page_count || 1), 0);
+
+  const rawPic = orderData?.order?.shop?.profile_picture_url;
+  const shopProfileUrl = rawPic ? (rawPic.startsWith('http') ? rawPic : `${API_BASE}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,11 +113,19 @@ export default function OrderSuccessScreen() {
           {/* Shop Row */}
           <View style={styles.infoRow}>
             <View style={styles.shopImageContainer}>
-              <Image
-                source={require('@/assets/images/logo-img.png')}
-                style={styles.shopImage}
-                resizeMode="contain"
-              />
+              {shopProfileUrl ? (
+                <Image
+                  source={{ uri: shopProfileUrl }}
+                  style={styles.shopImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Image
+                  source={require('@/assets/images/logo-img.png')}
+                  style={styles.shopImage}
+                  resizeMode="contain"
+                />
+              )}
             </View>
             <View style={styles.shopTextContainer}>
               <Text style={styles.shopName}>{shopName}</Text>
@@ -120,17 +136,76 @@ export default function OrderSuccessScreen() {
 
           <View style={styles.infoDivider} />
 
-          {/* File Row */}
-          <View style={styles.infoRow}>
-            <View style={styles.pdfIconContainer}>
-              <Text style={styles.pdfText}>{fileType}</Text>
+          {/* File / Batch Summary Row */}
+          {isMultiFile ? (
+            <>
+              <View style={styles.infoRow}>
+                <View style={[styles.pdfIconContainer, { backgroundColor: '#FEF3C7' }]}>
+                  <Feather name="copy" size={20} color="#F59E0B" />
+                </View>
+                <View style={styles.fileTextContainer}>
+                  <Text style={styles.fileName}>{files.length} Print Documents</Text>
+                  <Text style={styles.fileDetails}>
+                    {totalPagesCount} total pages • Batch Order
+                  </Text>
+                </View>
+                <Text style={styles.filePrice}>{price}</Text>
+              </View>
+
+              {/* Compact Breakdown List */}
+              <View style={{ backgroundColor: '#F9FAFB', paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+                {files.map((file: any, index: number) => {
+                  const setting = printSettings.find((s: any) => s.file_id === file.file_id) || printSettings[index];
+                  const isImg = file.file_type?.toLowerCase().includes('image');
+                  return (
+                    <View key={file.file_id || index} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                        <Feather 
+                          name={isImg ? "image" : "file-text"} 
+                          size={14} 
+                          color={isImg ? "#3B82F6" : "#EF4444"} 
+                          style={{ marginRight: 6 }} 
+                        />
+                        <Text numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Poppins-Medium', color: '#374151', flex: 1 }}>
+                          {file.file_name}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 12, fontFamily: 'Poppins-Regular', color: '#6B7280' }}>
+                        {file.page_count || 1} pgs • {setting?.copies || 1}x
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          ) : (
+            <View style={styles.infoRow}>
+              {(() => {
+                const isImg = firstFile?.file_type?.toLowerCase().includes('image');
+                return (
+                  <>
+                    <View style={[
+                      styles.pdfIconContainer, 
+                      { backgroundColor: isImg ? '#DBEAFE' : '#FEE2E2' }
+                    ]}>
+                      {isImg ? (
+                        <Feather name="image" size={20} color="#3B82F6" />
+                      ) : (
+                        <Feather name="file-text" size={20} color="#EF4444" />
+                      )}
+                    </View>
+                    <View style={styles.fileTextContainer}>
+                      <Text style={styles.fileName} numberOfLines={1}>{firstFile?.file_name || 'Document.pdf'}</Text>
+                      <Text style={styles.fileDetails}>
+                        {`${firstFile?.page_count ? firstFile.page_count + ' pages • ' : ''}${firstSettings?.copies ? firstSettings.copies + ' copies • ' : ''}${firstSettings?.color_mode === 'Colored' ? 'Color' : 'B&W'}`}
+                      </Text>
+                    </View>
+                    <Text style={styles.filePrice}>{price}</Text>
+                  </>
+                );
+              })()}
             </View>
-            <View style={styles.fileTextContainer}>
-              <Text style={styles.fileName} numberOfLines={1}>{fileName}</Text>
-              <Text style={styles.fileDetails}>{pagesInfo}</Text>
-            </View>
-            <Text style={styles.filePrice}>{price}</Text>
-          </View>
+          )}
 
           <View style={styles.infoDivider} />
 

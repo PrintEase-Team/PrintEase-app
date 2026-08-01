@@ -94,6 +94,7 @@ public class PrintSettingsServiceimpl implements PrintSettingsService {
                 printSettings.setOrientation(printSettingsDto.getOrientation());
                 printSettings.setRequires_binding(printSettingsDto.getRequires_binding());
                 printSettings.setRequires_lamination(printSettingsDto.getRequires_lamination());
+                printSettings.setTotal_cost(printSettingsDto.getTotal_cost());
             } else {
                 printSettings = PrintSettingsmapper.mapToPrint_Setting(printSettingsDto, order);
                 printSettings.setFile_id(file);

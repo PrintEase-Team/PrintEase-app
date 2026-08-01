@@ -14,7 +14,7 @@ export default function PaymentScreen() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
-  const { currentOrderId, totalAmount } = useOrderStore();
+  const { currentOrderId, totalAmount, clearCurrentOrder } = useOrderStore();
   const [showPaystack, setShowPaystack] = useState(false);
 
   const handleBack = () => {
@@ -23,20 +23,22 @@ export default function PaymentScreen() {
 
   const handleContinue = async () => {
     if (!currentOrderId || !totalAmount) {
-      Alert.alert('Error', 'Missing order details.');
+      Alert.alert('No Active Order', 'Please set up an order first.');
       return;
     }
 
+    setIsProcessing(true);
+
     try {
-      setIsProcessing(true);
-      // Create Pending Payment on our backend first
-      const payment = await paymentService.createPayment({
+      // 1. Create a payment record on backend
+      const res = await paymentService.createPayment({
         order_id: currentOrderId,
         amount: totalAmount,
         payment_method: 'Paystack',
       });
-      setCurrentPaymentId(payment.payment_id);
-      
+
+      setCurrentPaymentId(res.payment_id);
+
       // Open Paystack modal
       setShowPaystack(true);
       
@@ -53,7 +55,7 @@ export default function PaymentScreen() {
       // Send reference to backend to securely verify and confirm
       await paymentService.confirmPayment(currentPaymentId, reference);
       setIsProcessing(false);
-      router.push('/order-success' as any);
+      router.push({ pathname: '/order-success', params: { orderId: currentOrderId } } as any);
     } catch (e: any) {
       console.error(e);
       Alert.alert('Verification Failed', 'Payment was made but could not be verified on our server.');

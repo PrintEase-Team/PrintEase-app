@@ -80,6 +80,9 @@ public class Print_Settings {
     @Column(name = "requires_lamination")
     private Boolean requires_lamination = false;
 
+    @Column(name = "total_cost")
+    private Double total_cost;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime created_at;

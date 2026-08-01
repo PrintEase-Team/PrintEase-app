@@ -215,6 +215,7 @@
 .docIcon.pdf { background-color: #ef4444; }
 .docIcon.img { background-color: #8b5cf6; }
 .docIcon.doc { background-color: #3b82f6; }
+.docIcon.batch { background-color: #475569; }
 .docIcon.defaultIcon { background-color: #64748b; }
 .docIcon.docx { background-color: #3b82f6; }
 .docIcon.xlsx { background-color: #22c55e; }
@@ -227,10 +228,10 @@
   display: inline-block;
   text-align: center;
 }
-.statusBadge.pending { background-color: #fff7ed; color: #f97316; }
+.statusBadge.pending, .statusBadge.active, .statusBadge.unpaid { background-color: #fff7ed; color: #f97316; }
 .statusBadge.printing { background-color: #eff6ff; color: #3b82f6; }
 .statusBadge.ready { background-color: #f0fdf4; color: #22c55e; }
-.statusBadge.completed { background-color: #f0fdf4; color: #22c55e; }
+.statusBadge.completed, .statusBadge.collected { background-color: #f1f5f9; color: #64748b; }
 .statusBadge.cancelled { background-color: #fef2f2; color: #ef4444; }
 
 .actionsWrapper {
