@@ -74,10 +74,10 @@ public class JWTService {
         byte[] keyBytes;
         try {
             keyBytes = Decoders.BASE64.decode(secretKey);
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             try {
                 keyBytes = Decoders.BASE64URL.decode(secretKey);
-            } catch (IllegalArgumentException ex) {
+            } catch (Exception ex) {
                 keyBytes = secretKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             }
         }
