@@ -6,7 +6,7 @@ import com.group108.printease.entities.Users;
 public class Usersmapper {
     public static UsersDto mapToUserDto(Users users) {
         return new UsersDto(
-                users.getUser_id(),
+                users.getUserId(),
                 users.getFull_name(),
                 users.getEmail(),
                 users.getPassword_hash(),
@@ -27,7 +27,7 @@ public class Usersmapper {
 
     public static Users mapsToUsers(UsersDto usersDto) {
         return Users.builder()
-                .user_id(usersDto.getUser_id())
+                .userId(usersDto.getUserId())
                 .full_name(usersDto.getFull_name())
                 .email(usersDto.getEmail())
                 .password_hash(usersDto.getPassword_hash())

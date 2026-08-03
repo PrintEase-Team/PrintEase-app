@@ -122,7 +122,7 @@ public class PaymentServiceImpl implements PaymentService {
                                         com.group108.printease.mapper.Ordersmapper.mapToOrdersDto(order));
                             }
                             if (order.getStudent_id() != null) {
-                                messagingTemplate.convertAndSend("/topic/student/" + order.getStudent_id().getUser_id(),
+                                messagingTemplate.convertAndSend("/topic/student/" + order.getStudent_id().getUserId(),
                                         com.group108.printease.mapper.Ordersmapper.mapToOrdersDto(order));
                             }
                         }
@@ -132,7 +132,7 @@ public class PaymentServiceImpl implements PaymentService {
                     // Notify user
                     if (order.getStudent_id() != null) {
                         notificationsService.createNotification(
-                                order.getStudent_id().getUser_id(),
+                                order.getStudent_id().getUserId(),
                                 "Payment Successful",
                                 "Your payment of GHS " + payment.getAmount() + " was successful.",
                                 "payment_success");

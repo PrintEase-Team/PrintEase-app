@@ -9,6 +9,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PrintShopsRepository extends JpaRepository<PrintShops, UUID> {
-    @Query("SELECT s FROM PrintShops s WHERE s.vendor.user_id = :vendorId")
+    @Query("SELECT s FROM PrintShops s WHERE s.vendor.id = :vendorId")
     Optional<PrintShops> fetchByVendorId(@Param("vendorId") UUID vendorId);
 }

@@ -12,14 +12,14 @@ import java.util.UUID;
 
 public interface NotificationsRepository extends JpaRepository<Notifications, UUID> {
 
-    @Query("SELECT n FROM Notifications n WHERE n.user.user_id = :userId ORDER BY n.created_at DESC")
+    @Query("SELECT n FROM Notifications n WHERE n.user.id = :userId ORDER BY n.created_at DESC")
     List<Notifications> fetchNotificationsByUserId(@Param("userId") UUID userId, org.springframework.data.domain.Pageable pageable);
 
-    @Query("SELECT n FROM Notifications n WHERE n.user.user_id = :userId ORDER BY n.created_at DESC")
+    @Query("SELECT n FROM Notifications n WHERE n.user.id = :userId ORDER BY n.created_at DESC")
     List<Notifications> fetchNotificationsByUserId(@Param("userId") UUID userId);
 
     @Transactional
     @Modifying
-    @Query("DELETE FROM Notifications n WHERE n.user.user_id = :userId")
+    @Query("DELETE FROM Notifications n WHERE n.user.id = :userId")
     void deleteNotificationsByUserId(@Param("userId") UUID userId);
 }

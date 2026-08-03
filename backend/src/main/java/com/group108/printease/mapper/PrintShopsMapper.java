@@ -8,7 +8,7 @@ public class PrintShopsMapper {
     public static PrintShopsDto mapToPrintShopsDto(PrintShops printShop) {
         return new PrintShopsDto(
                 printShop.getShop_id(),
-                printShop.getVendor() != null ? printShop.getVendor().getUser_id() : null,
+                printShop.getVendor() != null ? printShop.getVendor().getUserId() : null,
                 printShop.getShop_name(),
                 printShop.getLocation(),
                 printShop.getPhone_number(),

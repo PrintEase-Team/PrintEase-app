@@ -227,7 +227,7 @@ public class OrdersServiceimpl implements OrdersService {
             
             // Only notify if student is present
             if (orders.getStudent_id() != null) {
-                notificationsService.createNotification(orders.getStudent_id().getUser_id(), title, message, type);
+                notificationsService.createNotification(orders.getStudent_id().getUserId(), title, message, type);
                 
                 String pushToken = orders.getStudent_id().getExpo_push_token();
                 if (pushToken != null && !pushToken.isEmpty()) {
@@ -247,7 +247,7 @@ public class OrdersServiceimpl implements OrdersService {
                 messagingTemplate.convertAndSend("/topic/shop/" + orders.getShop().getShop_id(), responseDto);
             }
             if (orders.getStudent_id() != null) {
-                messagingTemplate.convertAndSend("/topic/student/" + orders.getStudent_id().getUser_id(), responseDto);
+                messagingTemplate.convertAndSend("/topic/student/" + orders.getStudent_id().getUserId(), responseDto);
             }
         };
 

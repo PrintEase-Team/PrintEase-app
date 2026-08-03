@@ -66,7 +66,7 @@ public class Users implements UserDetails {
     @Id
     @UuidGenerator
     @Column(updatable = false, nullable = false)
-    private UUID user_id;
+    private UUID userId;
     @Column(name = "full_name", nullable = false)
     private String full_name;
     @Column(name = "email", nullable = false,unique = true)

@@ -10,7 +10,7 @@ public class Ordersmapper {
     public static OrdersDto mapToOrdersDto(Orders orders) {
         return new OrdersDto(
                 orders.getOrder_id(),
-                orders.getStudent_id() != null ? orders.getStudent_id().getUser_id() : null,
+                orders.getStudent_id() != null ? orders.getStudent_id().getUserId() : null,
                 orders.getShop() != null ? orders.getShop().getShop_id() : null,
                 orders.getPickup_code(),
                 orders.getStatus(),

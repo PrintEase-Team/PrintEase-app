@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OrdersRepository extends JpaRepository<Orders, UUID> {
-    @Query("SELECT o FROM Orders o WHERE o.student_id.user_id = :studentId")
+    @Query("SELECT o FROM Orders o WHERE o.student_id.id = :studentId")
     List<Orders> findOrdersByStudentId(@Param("studentId") UUID studentId);
 
     @Query("SELECT o FROM Orders o WHERE o.shop.shop_id = :shopId")

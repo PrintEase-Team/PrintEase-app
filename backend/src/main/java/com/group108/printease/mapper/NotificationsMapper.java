@@ -7,7 +7,7 @@ public class NotificationsMapper {
     public static NotificationsDto mapToNotificationsDto(Notifications notification) {
         return new NotificationsDto(
                 notification.getNotification_id(),
-                notification.getUser() != null ? notification.getUser().getUser_id() : null,
+                notification.getUser() != null ? notification.getUser().getUserId() : null,
                 notification.getTitle(),
                 notification.getMessage(),
                 notification.getType(),

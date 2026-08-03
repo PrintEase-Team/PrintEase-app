@@ -39,7 +39,7 @@ public class OtpService {
         otpRepository.save(verification);
 
         log.info("=================================================");
-        log.info("🔑 GENERATED OTP FOR {}: [{}]", email, otpCode);
+        log.info("ðŸ”‘ GENERATED OTP FOR {}: [{}]", email, otpCode);
         log.info("=================================================");
 
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
@@ -48,7 +48,7 @@ public class OtpService {
                 try {
                     SimpleMailMessage message = new SimpleMailMessage();
                     message.setTo(email);
-                    message.setSubject("PrintEase — Your Account Verification Code");
+                    message.setSubject("PrintEase â€” Your Account Verification Code");
                     message.setText("Welcome to PrintEase!\n\nYour 6-digit verification code is: " + otpCode + "\n\nThis code will expire in 10 minutes.");
                     mailSender.send(message);
                     log.info("Successfully sent verification email to {}", email);

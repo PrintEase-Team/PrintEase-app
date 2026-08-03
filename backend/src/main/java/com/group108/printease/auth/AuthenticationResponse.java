@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthenticationResponse {
     private String token;
-    private java.util.UUID user_id;
+    private java.util.UUID userId;
 
 }

@@ -43,9 +43,9 @@ public class UsersServiceimpl implements UsersService {
     }
 
     @Override
-    public UsersDto updateUser(UUID user_id, UsersDto updateUser) {
-        Users users = usersRepository.findById(user_id).orElseThrow(
-                ()-> new ResourceNotFoundException("User does not exist with "+ user_id)
+    public UsersDto updateUser(UUID userId, UsersDto updateUser) {
+        Users users = usersRepository.findById(userId).orElseThrow(
+                ()-> new ResourceNotFoundException("User does not exist with "+ userId)
         );
 
         if (updateUser.getFull_name() != null)
@@ -107,10 +107,10 @@ public class UsersServiceimpl implements UsersService {
     }
 
     @Override
-    public void deleteUsers(UUID user_id) {
-      Users users= usersRepository.findById(user_id)
+    public void deleteUsers(UUID userId) {
+      Users users= usersRepository.findById(userId)
                 .orElseThrow(
-                        ()->new ResourceNotFoundException("No user exist with user id "+ user_id)
+                        ()->new ResourceNotFoundException("No user exist with user id "+ userId)
                 );
         users.set_active(false);
         usersRepository.save(users);

@@ -23,8 +23,8 @@ public class UsersController {
     }
     //Build Get User Rest API
     @GetMapping("{id}")
-    public ResponseEntity<UsersDto> getUser(@PathVariable("id") UUID user_id){
-        UsersDto usersDto= usersService.getUser(user_id);
+    public ResponseEntity<UsersDto> getUser(@PathVariable("id") UUID userId){
+        UsersDto usersDto= usersService.getUser(userId);
         return ResponseEntity.ok(usersDto);
     }
 
@@ -37,15 +37,15 @@ public class UsersController {
 
     //REST API to update a user
     @PutMapping("{id}")
-    public ResponseEntity<UsersDto> updateUsers(@PathVariable("id") UUID user_id, @RequestBody UsersDto updateDto){
-        UsersDto usersDto = usersService.updateUser(user_id,updateDto);
+    public ResponseEntity<UsersDto> updateUsers(@PathVariable("id") UUID userId, @RequestBody UsersDto updateDto){
+        UsersDto usersDto = usersService.updateUser(userId,updateDto);
         return ResponseEntity.ok(usersDto);
     }
 
     //REST API TO DELETE A USER
     @DeleteMapping("{id}")
-    public ResponseEntity<String> deleteUsers(@PathVariable("id")UUID user_id){
-        usersService.deleteUsers(user_id);
+    public ResponseEntity<String> deleteUsers(@PathVariable("id")UUID userId){
+        usersService.deleteUsers(userId);
         return ResponseEntity.ok("User deleted Successfully.");
     }
 

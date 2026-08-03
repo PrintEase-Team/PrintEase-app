@@ -11,7 +11,7 @@ public class Filesmapper {
         return new FileDto(
                 files.getFile_id(),
                 files.getOrder_id() != null ? files.getOrder_id().getOrder_id() :  null,
-                files.getUploaded_by() != null ? files.getUploaded_by().getUser_id() : null,
+                files.getUploaded_by() != null ? files.getUploaded_by().getUserId() : null,
                 files.getFile_name(),
                 files.getFile_type(),
                 files.getFile_size_kb(),

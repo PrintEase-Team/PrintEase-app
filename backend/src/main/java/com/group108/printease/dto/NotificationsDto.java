@@ -14,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class NotificationsDto {
     private UUID notification_id;
-    private UUID user_id;
+    private UUID userId;
     private String title;
     private String message;
     private String type;
