@@ -4,9 +4,9 @@ import axios from "axios";
 // -------------------------------------------------------------------
 // IMPORTANT: UPDATE THIS IP ADDRESS WHENEVER YOU CHANGE NETWORKS/PCS!
 // -------------------------------------------------------------------
-const YOUR_CURRENT_IP = "10.167.0.240"; // <-- Change this to your PC's IP address
+const PRODUCTION_URL = "https://printease-backend-3vn2.onrender.com/api";
 
-const BASE_URL = `http://${YOUR_CURRENT_IP}:8080/api`;
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || PRODUCTION_URL;
 export const API_BASE = BASE_URL.replace("/api", "");
 
 const api = axios.create({
