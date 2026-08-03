@@ -26,7 +26,7 @@ public class PrintShopsServiceimpl implements PrintShopsService {
 
     @Override
     public PrintShopsDto getShopByVendorId(UUID vendorId) {
-        PrintShops shop = printShopsRepository.findByVendorId(vendorId)
+        PrintShops shop = printShopsRepository.fetchByVendorId(vendorId)
                 .orElseThrow(() -> new ResourceNotFoundException("No active shop found for vendor id: " + vendorId));
         return PrintShopsMapper.mapToPrintShopsDto(shop);
     }
@@ -48,7 +48,7 @@ public class PrintShopsServiceimpl implements PrintShopsService {
 
     @Override
     public PrintShopsDto updateShop(UUID vendorId, PrintShopsDto dto) {
-        Optional<PrintShops> optionalShop = printShopsRepository.findByVendorId(vendorId);
+        Optional<PrintShops> optionalShop = printShopsRepository.fetchByVendorId(vendorId);
         PrintShops shop;
 
         if (optionalShop.isPresent()) {
@@ -97,7 +97,7 @@ public class PrintShopsServiceimpl implements PrintShopsService {
 
     @Override
     public PrintShopsDto uploadShopImage(UUID vendorId, String imageType, org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
-        PrintShops shop = printShopsRepository.findByVendorId(vendorId)
+        PrintShops shop = printShopsRepository.fetchByVendorId(vendorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vendor not found with id: " + vendorId));
 
         java.nio.file.Path uploadPath = java.nio.file.Paths.get("uploads", "images").toAbsolutePath().normalize();

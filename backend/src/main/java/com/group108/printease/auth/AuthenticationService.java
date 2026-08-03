@@ -94,7 +94,7 @@ public class AuthenticationService {
         String otp = String.format("%06d", new java.util.Random().nextInt(999999));
 
         // Invalidate old tokens
-        passwordResetTokenRepository.findByUser(user).ifPresent(passwordResetTokenRepository::delete);
+        passwordResetTokenRepository.fetchByUser(user).ifPresent(passwordResetTokenRepository::delete);
 
         com.group108.printease.entities.PasswordResetToken resetToken = com.group108.printease.entities.PasswordResetToken.builder()
                 .user(user)
@@ -112,7 +112,7 @@ public class AuthenticationService {
     }
 
     public void resetPassword(ResetPasswordRequest request) {
-        var token = passwordResetTokenRepository.findByOtp(request.getOtp())
+        var token = passwordResetTokenRepository.fetchByOtp(request.getOtp())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid OTP"));
 
         if (token.isExpired()) {

@@ -10,5 +10,5 @@ import java.util.UUID;
 
 public interface PrintShopsRepository extends JpaRepository<PrintShops, UUID> {
     @Query("SELECT s FROM PrintShops s WHERE s.vendor.user_id = :vendorId")
-    Optional<PrintShops> findByVendorId(@Param("vendorId") UUID vendorId);
+    Optional<PrintShops> fetchByVendorId(@Param("vendorId") UUID vendorId);
 }
