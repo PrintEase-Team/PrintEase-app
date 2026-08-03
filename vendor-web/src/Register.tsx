@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Sun, Moon, User, Phone } from 'lucide-react';
 import styles from './Login.module.css'; // Reusing Login styles for consistency
+import { API_BASE_URL } from './config';
 
 export default function Register() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -35,7 +36,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,10 +45,7 @@ export default function Register() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('vendor_token', data.token);
-        localStorage.setItem('vendor_id', data.user_id);
-        navigate('/dashboard');
+        navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
       } else {
         const errorData = await response.text();
         setError('Registration failed. Please try again or use a different email.');
@@ -183,13 +181,6 @@ export default function Register() {
               {isLoading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
-
-          <div className={styles.divider}>or</div>
-
-          <button type="button" className={styles.googleButton}>
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className={styles.googleIcon} />
-            Sign up with Google
-          </button>
 
           <div className={styles.footer}>
             Already have an account? 

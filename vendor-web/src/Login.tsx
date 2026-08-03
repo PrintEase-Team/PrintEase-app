@@ -141,13 +141,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div className={styles.divider}>or</div>
-
-          <button type="button" className={styles.googleButton}>
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className={styles.googleIcon} />
-            Sign in with Google
-          </button>
-
           <div className={styles.footer}>
             Don't have an account? 
             <Link to="/register" className={styles.contactAdmin}>Sign up</Link>

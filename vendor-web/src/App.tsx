@@ -10,6 +10,7 @@ import OrderDetails from './pages/orders/OrderDetails';
 import Analytics from './pages/analytics/Analytics';
 import Settings from './pages/settings/Settings';
 import GuestOrder from './pages/guest/GuestOrder';
+import VerifyOtp from './VerifyOtp';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('vendor_token');
@@ -27,6 +28,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/guest-order" element={<GuestOrder />} />
         <Route path="/express" element={<GuestOrder />} />
         
