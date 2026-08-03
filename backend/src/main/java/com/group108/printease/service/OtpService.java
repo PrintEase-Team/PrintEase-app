@@ -6,6 +6,7 @@ import com.group108.printease.repositories.OtpRepository;
 import com.group108.printease.repositories.UsersRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ public class OtpService {
 
     private final OtpRepository otpRepository;
     private final UsersRepository usersRepository;
-    private final JavaMailSender mailSender;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
     private static final SecureRandom random = new SecureRandom();
 
@@ -41,15 +42,18 @@ public class OtpService {
         log.info("🔑 GENERATED OTP FOR {}: [{}]", email, otpCode);
         log.info("=================================================");
 
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(email);
-            message.setSubject("PrintEase — Your Account Verification Code");
-            message.setText("Welcome to PrintEase!\n\nYour 6-digit verification code is: " + otpCode + "\n\nThis code will expire in 10 minutes.");
-            mailSender.send(message);
-            log.info("Successfully sent verification email to {}", email);
-        } catch (Exception e) {
-            log.warn("Could not send email to {} via JavaMailSender: {}. (OTP is logged in console above!)", email, e.getMessage());
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender != null) {
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setTo(email);
+                message.setSubject("PrintEase — Your Account Verification Code");
+                message.setText("Welcome to PrintEase!\n\nYour 6-digit verification code is: " + otpCode + "\n\nThis code will expire in 10 minutes.");
+                mailSender.send(message);
+                log.info("Successfully sent verification email to {}", email);
+            } catch (Exception e) {
+                log.warn("Could not send email to {} via JavaMailSender: {}. (OTP is logged in console above!)", email, e.getMessage());
+            }
         }
 
         return otpCode;
