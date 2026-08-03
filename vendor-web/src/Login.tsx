@@ -38,7 +38,7 @@ export default function Login() {
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('vendor_token', data.token);
-        localStorage.setItem('vendor_id', data.user_id);
+        localStorage.setItem('vendor_id', data.userId || data.user_id);
         // Assuming vendor roles will be handled by the backend
         navigate('/dashboard');
       } else {

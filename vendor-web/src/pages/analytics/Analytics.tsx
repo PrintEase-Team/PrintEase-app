@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { TrendingUp, TrendingDown, ChevronDown, Activity, ShoppingBag, Printer, Users, DollarSign, Image, Scan, Book, FileCheck, Info, ArrowUpRight, Loader } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 import styles from './Analytics.module.css';
 
-const API_URL = 'http://localhost:8080/api/orders/shop/';
+const API_URL = `${API_BASE_URL}/api/orders/shop/`;
 export default function Analytics() {
   const [data, setData] = useState<any>(null);
   const [searchParams] = useSearchParams();

@@ -5,6 +5,7 @@ import SockJS from 'sockjs-client';
 import { Download, ChevronLeft, ChevronRight, MoreVertical, FileText, Book, Copy, ChevronsUpDown, Image } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { API_BASE_URL } from '../../config';
 import styles from './Orders.module.css';
 
 // We will fetch orders from the backend instead of using MOCK_ORDERS
@@ -39,7 +40,7 @@ export default function Orders() {
 
     const shopId = localStorage.getItem('shop_id');
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws-printease'),
+      webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws-printease`),
       debug: function (str) {
         console.log('STOMP: ' + str);
       },
@@ -70,7 +71,7 @@ export default function Orders() {
   const fetchOrders = () => {
     const shopId = localStorage.getItem('shop_id');
     if (!shopId) return;
-    fetch(`http://localhost:8080/api/orders/shop/${shopId}`)
+    fetch(`${API_BASE_URL}/api/orders/shop/${shopId}`)
       .then(res => res.json())
       .then(data => {
         const mappedOrders = data.map((o: any) => ({

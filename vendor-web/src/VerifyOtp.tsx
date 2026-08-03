@@ -63,11 +63,11 @@ export default function VerifyOtp() {
       const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp_code: code }),
+        body: JSON.stringify({ email, otpCode: code, otp_code: code }),
       });
 
       const data = await res.json();
-      if (res.ok && data.verified) {
+      if (res.ok && (data.success || data.verified)) {
         setSuccess('Email verified successfully! Redirecting to login...');
         setTimeout(() => navigate('/login'), 1500);
       } else {

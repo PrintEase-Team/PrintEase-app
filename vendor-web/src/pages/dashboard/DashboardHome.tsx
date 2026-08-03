@@ -20,6 +20,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { API_BASE_URL } from '../../config';
 import styles from './DashboardHome.module.css';
 
 export default function DashboardHome() {
@@ -45,7 +46,7 @@ export default function DashboardHome() {
     if (!shopId) return;
 
     const fetchOrders = () => {
-      fetch(`http://localhost:8080/api/orders/shop/${shopId}`)
+      fetch(`${API_BASE_URL}/api/orders/shop/${shopId}`)
         .then(res => res.json())
         .then(data => {
           setAllRawOrders(data);
@@ -60,7 +61,7 @@ export default function DashboardHome() {
     }, 30000); // 30s polling fallback
 
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws-printease'),
+      webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws-printease`),
       debug: function (str) {
         console.log('STOMP: ' + str);
       },

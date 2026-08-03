@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { LayoutDashboard, FileText, BarChart2, Settings, Bell, ChevronDown, Search, Calendar, Download } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 import styles from './DashboardLayout.module.css';
 
 export default function DashboardLayout() {
@@ -123,7 +124,7 @@ export default function DashboardLayout() {
 
     const shopId = localStorage.getItem('shop_id');
     try {
-      const res = await fetch(`http://localhost:8080/api/shops/${shopId}/status-override`, {
+      const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/status-override`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ override })
@@ -143,12 +144,12 @@ export default function DashboardLayout() {
       try {
         const vId = localStorage.getItem('vendor_id');
         if (!vId) return;
-        const res = await fetch(`http://localhost:8080/api/users/${vId}`);
+        const res = await fetch(`${API_BASE_URL}/api/users/${vId}`);
         if (res.ok) {
           const data = await res.json();
           setVendorName(data.full_name || 'Vendor');
         }
-        const shopRes = await fetch(`http://localhost:8080/api/shops/vendor/${vId}`);
+        const shopRes = await fetch(`${API_BASE_URL}/api/shops/vendor/${vId}`);
         if (shopRes.ok) {
           const shopDataRes = await shopRes.json();
           localStorage.setItem('shop_id', shopDataRes.shop_id);
@@ -240,7 +241,7 @@ export default function DashboardLayout() {
           <div className={styles.userProfileLeft}>
             <div className={styles.avatar} style={{ overflow: 'hidden' }}>
               {profileUrl ? (
-                <img src={`http://localhost:8080${profileUrl}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={profileUrl.startsWith('http') ? profileUrl : `${API_BASE_URL}${profileUrl}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 vendorName.substring(0,2).toUpperCase()
               )}

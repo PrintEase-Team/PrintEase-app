@@ -1,6 +1,7 @@
 import { ArrowLeft, Book, BookOpen, Calendar, CreditCard as CardIcon, Check, CheckCircle2, Clock, Copy, Download, FileCheck, FileText, Image, Layers, Maximize2, Printer, Settings, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { API_BASE_URL } from '../../config';
 import styles from './OrderDetails.module.css';
 
 export default function OrderDetails() {
@@ -9,14 +10,14 @@ export default function OrderDetails() {
   const [order, setOrder] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`http://localhost:8080/api/orders/${id}/full`)
+    fetch(`${API_BASE_URL}/api/orders/${id}/full`)
       .then(res => res.json())
       .then(data => setOrder(data))
       .catch(err => console.error('Error fetching order:', err));
   }, [id]);
 
   const updateStatus = (newStatus: string) => {
-    fetch(`http://localhost:8080/api/orders/${id}`, {
+    fetch(`${API_BASE_URL}/api/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
@@ -24,7 +25,7 @@ export default function OrderDetails() {
       .then(res => res.json())
       .then(() => {
         // Re-fetch the full order details to refresh the UI
-        return fetch(`http://localhost:8080/api/orders/${id}/full`)
+        return fetch(`${API_BASE_URL}/api/orders/${id}/full`)
           .then(res => res.json())
           .then(data => setOrder(data));
       })
@@ -199,7 +200,7 @@ export default function OrderDetails() {
                         <div className={styles.previewImage} style={{ padding: 0, overflow: 'hidden' }}>
                           {file.file_type?.startsWith('image/') ? (
                             <img
-                              src={`http://localhost:8080/api/file/${file.file_id}/view`}
+                              src={`${API_BASE_URL}/api/file/${file.file_id}/view`}
                               alt="Document Preview"
                               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             />
@@ -217,7 +218,7 @@ export default function OrderDetails() {
                     <button
                       className={styles.downloadBtn}
                       onClick={() => {
-                        window.open(`http://localhost:8080/api/file/${file.file_id}/view`, '_blank');
+                        window.open(`${API_BASE_URL}/api/file/${file.file_id}/view`, '_blank');
                       }}
                     >
                       <Download size={16} /> Download File

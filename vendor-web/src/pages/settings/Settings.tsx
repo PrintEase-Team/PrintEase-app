@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Store, Clock, Shield, Bell, Check, AlertTriangle, Phone, Mail, MapPin, CheckCircle2, Search, Navigation, ChevronDown } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 import styles from './Settings.module.css';
 import { jwtDecode } from 'jwt-decode';
 // Leaflet map dependencies removed
@@ -60,14 +61,14 @@ export default function Settings() {
         if (!token || !vId) return;
         setVendorId(vId);
 
-        const userResponse = await fetch(`http://localhost:8080/api/users/${vId}`);
+        const userResponse = await fetch(`${API_BASE_URL}/api/users/${vId}`);
         if (userResponse.ok) {
           const userData = await userResponse.json();
           setVendorName(userData.full_name || '');
           setVendorEmail(userData.email || '');
         }
 
-        const response = await fetch(`http://localhost:8080/api/shops/vendor/${vId}`);
+        const response = await fetch(`${API_BASE_URL}/api/shops/vendor/${vId}`);
         if (response.ok) {
           const data = await response.json();
           setShopId(data.shop_id);
@@ -115,7 +116,7 @@ export default function Settings() {
   const handleUpdateOverride = async (overrideValue: string) => {
     if (!shopId) return;
     try {
-      const res = await fetch(`http://localhost:8080/api/shops/${shopId}/status-override`, {
+      const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/status-override`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ override: overrideValue })
@@ -134,7 +135,7 @@ export default function Settings() {
     if (!vendorId) return;
     setIsSaving(true);
     try {
-      await fetch(`http://localhost:8080/api/shops/vendor/${vendorId}`, {
+      await fetch(`${API_BASE_URL}/api/shops/vendor/${vendorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,7 +182,7 @@ export default function Settings() {
     formData.append('file', file);
     
     try {
-      const response = await fetch(`http://localhost:8080/api/shops/vendor/${vendorId}/upload-image?type=${type}`, {
+      const response = await fetch(`${API_BASE_URL}/api/shops/vendor/${vendorId}/upload-image?type=${type}`, {
         method: 'POST',
         body: formData
       });
@@ -418,7 +419,7 @@ export default function Settings() {
               <div className={styles.avatarSection}>
                 <div className={styles.avatarCircle} style={{ overflow: 'hidden' }}>
                   {profileUrl ? (
-                    <img src={`http://localhost:8080${profileUrl}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={profileUrl.startsWith('http') ? profileUrl : `${API_BASE_URL}${profileUrl}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     vendorName ? vendorName.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'VN'
                   )}
@@ -501,7 +502,7 @@ export default function Settings() {
                   <label className={styles.label}>Shop Profile Picture</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     {profileUrl ? (
-                      <img src={`http://localhost:8080${profileUrl}`} alt="Profile" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                      <img src={profileUrl.startsWith('http') ? profileUrl : `${API_BASE_URL}${profileUrl}`} alt="Profile" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Store size={20} color="#94a3b8" />
@@ -514,7 +515,7 @@ export default function Settings() {
                   <label className={styles.label}>Shop Banner Image</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {bannerUrl ? (
-                      <img src={`http://localhost:8080${bannerUrl}`} alt="Banner" style={{ width: '100%', height: 160, borderRadius: 8, objectFit: 'cover' }} />
+                      <img src={bannerUrl.startsWith('http') ? bannerUrl : `${API_BASE_URL}${bannerUrl}`} alt="Banner" style={{ width: '100%', height: 160, borderRadius: 8, objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: '100%', height: 160, borderRadius: 8, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ color: '#94a3b8' }}>No banner uploaded</span>
