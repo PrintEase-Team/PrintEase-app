@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -115,7 +116,7 @@ public class OrdersServiceimpl implements OrdersService {
         if (request.getFiles() != null && !request.getFiles().isEmpty()) {
             for (var fileDto : request.getFiles()) {
                 filesRepository.findById(fileDto.getFile_id()).ifPresent(f -> {
-                    f.setOrder(savedOrder);
+                    f.setOrder_id(savedOrder);
                     filesRepository.save(f);
                 });
             }

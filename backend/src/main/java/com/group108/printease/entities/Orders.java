@@ -17,6 +17,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Orders {
     public enum order_status {
         Unpaid, Pending, Printing, Ready, Collected
