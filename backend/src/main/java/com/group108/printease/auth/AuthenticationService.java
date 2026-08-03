@@ -27,6 +27,10 @@ public class AuthenticationService {
 
 
     public AuthenticationResponse register(RegisterRequest request) {
+        if (repository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email address is already registered. Please sign in or use another email.");
+        }
+
         Users.user_role userRole = Users.user_role.Student;
         if (request.getRole() != null && request.getRole().equalsIgnoreCase("Admin")) {
             userRole = Users.user_role.Admin;
