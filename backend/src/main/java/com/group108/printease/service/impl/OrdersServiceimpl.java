@@ -108,7 +108,6 @@ public class OrdersServiceimpl implements OrdersService {
                 .status(Orders.order_status.Pending)
                 .submitted_at(java.time.LocalDateTime.now())
                 .estimated_ready_time(java.time.LocalDateTime.now().plusMinutes(30))
-                .payment_amount(new BigDecimal("5.00"))
                 .build();
 
         Orders savedOrder = ordersRepository.save(order);
