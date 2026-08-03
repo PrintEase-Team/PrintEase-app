@@ -103,7 +103,7 @@ public class OrdersServiceimpl implements OrdersService {
 
         Orders order = Orders.builder()
                 .student_id(guestUser)
-                .shop_id(shop)
+                .shop(shop)
                 .pickup_code(pickupCode)
                 .status(Orders.order_status.Pending)
                 .submitted_at(java.time.LocalDateTime.now())
