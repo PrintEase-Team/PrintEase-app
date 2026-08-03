@@ -1,12 +1,70 @@
-// Expo Go on Android (SDK 53+) no longer supports expo-notifications.
-// To use push notifications, a custom development build is required via EAS.
-// For this class project, we will safely mock this to prevent crashes in Expo Go.
+import { Platform } from 'react-native';
+import api from './api';
 
-export async function registerForPushNotificationsAsync() {
-  console.log('Push notifications are disabled in Expo Go for SDK 54.');
-  return null;
+let Notifications: any = null;
+
+try {
+  Notifications = require('expo-notifications');
+  if (Notifications && typeof Notifications.setNotificationHandler === 'function') {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  }
+} catch (e) {
+  console.log('Notice: Native module ExpoPushTokenManager not present in current binary client.');
+}
+
+export async function registerForPushNotificationsAsync(): Promise<string | null> {
+  if (!Notifications || !Notifications.getPermissionsAsync) {
+    console.log('Push notifications unavailable: native module not linked.');
+    return null;
+  }
+
+  let token: string | null = null;
+
+  if (Platform.OS === 'android' && Notifications.setNotificationChannelAsync) {
+    try {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'PrintEase Updates',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#005CE6',
+      });
+    } catch (e) {
+      // Channel handling
+    }
+  }
+
+  try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      return null;
+    }
+    const pushTokenData = await Notifications.getExpoPushTokenAsync();
+    token = pushTokenData.data;
+    console.log('Expo Push Token generated:', token);
+  } catch (e) {
+    console.log('Notice: Push Token generation handled:', e);
+  }
+
+  return token;
 }
 
 export async function savePushTokenToBackend(userId: string, token: string) {
-  // No-op
+  if (!userId || !token) return;
+  try {
+    await api.put(`/users/${userId}/push-token`, { token });
+    console.log('Push token saved to backend for user:', userId);
+  } catch (e) {
+    console.log('Failed to save push token to backend:', e);
+  }
 }

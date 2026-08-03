@@ -45,17 +45,38 @@ export default function NotificationsScreen() {
       const response = await api.get(`/notifications/user/${user_id}`);
       const rawData = response.data;
       
-      // Group by 'Recent' for now, or format dates properly
-      const formattedData: NotificationItem[] = rawData.map((n: any) => ({
-        id: n.notification_id,
-        type: n.type,
-        title: n.title,
-        message: n.message,
-        time: new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isUnread: !n.is_read
-      }));
+      const todayData: NotificationItem[] = [];
+      const earlierData: NotificationItem[] = [];
+      const now = new Date();
 
-      setSections([{ title: 'Recent Notifications', data: formattedData }]);
+      rawData.forEach((n: any) => {
+        const itemDate = new Date(n.created_at || Date.now());
+        const isToday = itemDate.toDateString() === now.toDateString();
+
+        const item: NotificationItem = {
+          id: n.notification_id,
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          time: itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isUnread: !n.is_read
+        };
+
+        if (isToday) {
+          todayData.push(item);
+        } else {
+          earlierData.push(item);
+        }
+      });
+
+      const newSections: NotificationSection[] = [];
+      if (todayData.length > 0) newSections.push({ title: 'Today', data: todayData });
+      if (earlierData.length > 0) newSections.push({ title: 'Earlier', data: earlierData });
+      if (newSections.length === 0 && rawData.length > 0) {
+        newSections.push({ title: 'Recent Notifications', data: rawData });
+      }
+
+      setSections(newSections);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -74,7 +95,6 @@ export default function NotificationsScreen() {
   };
 
   const handleNotificationPress = async (item: NotificationItem) => {
-    // Toggle unread state to read
     if (item.isUnread) {
       try {
         await api.put(`/notifications/${item.id}/read`);
@@ -93,7 +113,6 @@ export default function NotificationsScreen() {
       }
     }
 
-    // Navigate to Order Details if order parameters are present
     if (item.orderParams) {
       router.push({
         pathname: '/order-details',
@@ -117,41 +136,51 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleClearAll = async () => {
+    if (!user_id) return;
+    try {
+      await api.delete(`/notifications/user/${user_id}`);
+      setSections([]);
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+    }
+  };
+
   const getIconConfig = (type: NotificationItem['type']) => {
     switch (type) {
       case 'payment_success':
         return {
-          bgColor: '#10B981', // Solid Green
+          bgColor: '#10B981',
           icon: <Ionicons name="checkmark-sharp" size={20} color="#ffffff" />,
         };
       case 'printing_started':
         return {
-          bgColor: '#005CE6', // Solid Blue
+          bgColor: '#005CE6',
           icon: <Feather name="printer" size={18} color="#ffffff" />,
         };
       case 'queue_update':
         return {
-          bgColor: '#005CE6', // Solid Blue
+          bgColor: '#005CE6',
           icon: <Feather name="clock" size={18} color="#ffffff" />,
         };
       case 'pickup_ready':
         return {
-          bgColor: '#F97316', // Solid Orange
+          bgColor: '#F97316',
           icon: <Feather name="bell" size={18} color="#ffffff" />,
         };
       case 'new_offer':
         return {
-          bgColor: '#8B5CF6', // Solid Purple
+          bgColor: '#8B5CF6',
           icon: <Ionicons name="megaphone" size={18} color="#ffffff" />,
         };
       case 'shop_update':
         return {
-          bgColor: '#6B7280', // Solid Slate Grey
+          bgColor: '#6B7280',
           icon: <Ionicons name="storefront" size={18} color="#ffffff" />,
         };
       case 'payment_failed':
         return {
-          bgColor: '#EF4444', // Solid Red
+          bgColor: '#EF4444',
           icon: <Feather name="alert-triangle" size={18} color="#ffffff" />,
         };
       default:
@@ -172,9 +201,14 @@ export default function NotificationsScreen() {
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Notifications</Text>
         </View>
-        <TouchableOpacity style={styles.settingsButton} activeOpacity={0.7} onPress={handleMarkAllAsRead}>
-          <Ionicons name="checkmark-done" size={24} color="#005CE6" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity style={styles.settingsButton} activeOpacity={0.7} onPress={handleMarkAllAsRead}>
+            <Ionicons name="checkmark-done" size={22} color="#005CE6" />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.settingsButton, { marginLeft: 8 }]} activeOpacity={0.7} onPress={handleClearAll}>
+            <Feather name="trash-2" size={20} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView

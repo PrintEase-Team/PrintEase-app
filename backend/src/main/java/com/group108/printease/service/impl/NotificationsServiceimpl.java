@@ -40,7 +40,7 @@ public class NotificationsServiceimpl implements NotificationsService {
 
     @Override
     public List<NotificationsDto> getUserNotifications(UUID userId) {
-        List<Notifications> notifications = notificationsRepository.findByUserId(userId);
+        List<Notifications> notifications = notificationsRepository.findByUserId(userId, org.springframework.data.domain.PageRequest.of(0, 50));
         return notifications.stream()
                 .map(NotificationsMapper::mapToNotificationsDto)
                 .collect(Collectors.toList());
@@ -65,5 +65,10 @@ public class NotificationsServiceimpl implements NotificationsService {
             }
         }
         notificationsRepository.saveAll(notifications);
+    }
+
+    @Override
+    public void clearAllNotifications(UUID userId) {
+        notificationsRepository.deleteAllByUserId(userId);
     }
 }

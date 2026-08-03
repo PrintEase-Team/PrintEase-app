@@ -15,6 +15,7 @@
     },
     "android": {
       "package": "com.group108.printease",
+      "usesCleartextTraffic": true,
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

@@ -9,4 +9,5 @@ public interface NotificationsService {
     List<NotificationsDto> getUserNotifications(UUID userId);
     NotificationsDto markAsRead(UUID notificationId);
     void markAllAsRead(UUID userId);
+    void clearAllNotifications(UUID userId);
 }
