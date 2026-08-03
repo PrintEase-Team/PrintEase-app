@@ -56,7 +56,7 @@ public class OtpService {
     }
 
     public boolean verifyOtp(String email, String otpCode) {
-        var opt = otpRepository.findTopByEmailAndOtpCodeAndIsVerifiedFalseOrderByCreatedAtDesc(email, otpCode);
+        var opt = otpRepository.findLatestPendingByEmailAndCode(email, otpCode);
         if (opt.isEmpty()) {
             return false;
         }
