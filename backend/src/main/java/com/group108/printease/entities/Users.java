@@ -93,6 +93,8 @@ public class Users implements UserDetails {
     private LocalDateTime last_login_at;
     @Column(name = "is_active", columnDefinition = "boolean default true")
     private boolean is_active;
+    @Column(name = "is_verified", columnDefinition = "boolean default false")
+    private boolean is_verified;
     @Column(name = "default_shop_id")
     private UUID default_shop_id;
     @Column(name = "expo_push_token")

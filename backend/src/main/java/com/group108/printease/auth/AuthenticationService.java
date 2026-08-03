@@ -23,6 +23,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JWTService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final com.group108.printease.service.OtpService otpService;
 
 
     public AuthenticationResponse register(RegisterRequest request) {
@@ -36,11 +37,15 @@ public class AuthenticationService {
                 .password_hash(passwordEncoder.encode(request.getPassword()))
                 .phone_number(request.getPhoneNumber())
                 .role(userRole)
+                .is_verified(false)
                 .default_location_name(request.getDefaultLocationName())
                 .default_latitude(request.getDefaultLatitude())
                 .default_longitude(request.getDefaultLongitude())
                 .build();
         var savedUser = repository.save(user);
+
+        // Generate & send OTP for verification
+        otpService.generateAndSendOtp(savedUser.getEmail());
 
         // Auto-create shop if vendor
         if (userRole == Users.user_role.Admin) {

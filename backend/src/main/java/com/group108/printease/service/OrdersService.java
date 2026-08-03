@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface OrdersService {
     OrdersDto createOrders (OrdersDto ordersDto);
+    OrdersDto createGuestOrder(com.group108.printease.controller.OrdersController.GuestOrderRequestDto request);
     OrdersDto getOrders(UUID order_id);
     List<OrdersDto> getAllOrders();
     List<OrdersDto> getOrdersByStudent(UUID studentId);

@@ -76,6 +76,61 @@ public class OrdersServiceimpl implements OrdersService {
     }
 
     @Override
+    public OrdersDto createGuestOrder(com.group108.printease.controller.OrdersController.GuestOrderRequestDto request) {
+        PrintShops shop = printShopsRepository.findById(request.getShop_id())
+                .orElseThrow(() -> new EntityNotFoundException("Shop not found with id: " + request.getShop_id()));
+
+        String guestEmail = request.getGuest_email() != null && !request.getGuest_email().isBlank()
+                ? request.getGuest_email()
+                : "guest_" + System.currentTimeMillis() + "@printease.app";
+
+        Users guestUser = usersRepository.findByEmail(guestEmail).orElseGet(() -> {
+            Users u = Users.builder()
+                    .full_name(request.getGuest_name() != null ? request.getGuest_name() : "Campus Guest")
+                    .email(guestEmail)
+                    .password_hash("GUEST_NO_PASS")
+                    .phone_number(request.getGuest_phone())
+                    .role(Users.user_role.Student)
+                    .is_active(true)
+                    .is_verified(true)
+                    .build();
+            return usersRepository.save(u);
+        });
+
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        String pickupCode = String.format("%06d", random.nextInt(1000000));
+
+        Orders order = Orders.builder()
+                .student_id(guestUser)
+                .shop_id(shop)
+                .pickup_code(pickupCode)
+                .status(Orders.order_status.Pending)
+                .submitted_at(java.time.LocalDateTime.now())
+                .estimated_ready_time(java.time.LocalDateTime.now().plusMinutes(30))
+                .payment_amount(new BigDecimal("5.00"))
+                .build();
+
+        Orders savedOrder = ordersRepository.save(order);
+
+        if (request.getFiles() != null && !request.getFiles().isEmpty()) {
+            for (var fileDto : request.getFiles()) {
+                filesRepository.findById(fileDto.getFile_id()).ifPresent(f -> {
+                    f.setOrder(savedOrder);
+                    filesRepository.save(f);
+                });
+            }
+        }
+
+        OrdersDto responseDto = Ordersmapper.mapToOrdersDto(savedOrder);
+        responseDto.setStudent_name((request.getGuest_name() != null ? request.getGuest_name() : "Guest") + " (GUEST)");
+        responseDto.setStudent_phone(request.getGuest_phone());
+
+        messagingTemplate.convertAndSend("/topic/shop/" + shop.getShop_id(), responseDto);
+
+        return responseDto;
+    }
+
+    @Override
     public OrdersDto getOrders(UUID order_id) {
         Orders orders = ordersRepository.findById(order_id)
                 .orElseThrow(()->new ResourceNotFoundException("No Order exists with this Id"+order_id));

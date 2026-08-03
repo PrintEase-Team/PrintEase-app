@@ -89,7 +89,7 @@ export default function SignUpScreen() {
         defaultLatitude: selectedLocation ? selectedLocation.latitude : undefined,
         defaultLongitude: selectedLocation ? selectedLocation.longitude : undefined,
       });
-      router.replace('/(tabs)');
+      router.replace({ pathname: '/verify-otp', params: { email } } as any);
     } catch (e) {
       Alert.alert('Sign Up Failed', useAuthStore.getState().error || 'Could not register user');
     }

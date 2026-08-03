@@ -28,6 +28,31 @@ public class OrdersController {
     private final FilesRepository filesRepository;
     private final PrintSettingsRepository printSettingsRepository;
 
+    @lombok.Data
+    public static class GuestOrderFileDto {
+        private UUID file_id;
+        private Integer copies;
+        private String color_option;
+        private String sided_option;
+        private Boolean binding;
+        private Boolean lamination;
+    }
+
+    @lombok.Data
+    public static class GuestOrderRequestDto {
+        private UUID shop_id;
+        private String guest_name;
+        private String guest_phone;
+        private String guest_email;
+        private List<GuestOrderFileDto> files;
+    }
+
+    @PostMapping("/guest")
+    public ResponseEntity<OrdersDto> createGuestOrder(@RequestBody GuestOrderRequestDto request) {
+        OrdersDto created = ordersService.createGuestOrder(request);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
     @PostMapping
     public ResponseEntity<OrdersDto> createOrders(@RequestBody OrdersDto ordersDto){
         OrdersDto savedOrder = ordersService.createOrders(ordersDto);

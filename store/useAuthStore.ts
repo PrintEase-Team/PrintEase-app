@@ -84,22 +84,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (details: RegisterDetails) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await authService.register(details);
-      await AsyncStorage.setItem('token', response.token);
-      await AsyncStorage.setItem('user_id', response.user_id);
-      if (details.defaultLocationName) {
-        await AsyncStorage.setItem('defaultLocationName', details.defaultLocationName);
-        await AsyncStorage.setItem('defaultLatitude', String(details.defaultLatitude));
-        await AsyncStorage.setItem('defaultLongitude', String(details.defaultLongitude));
-      }
-      set({ 
-        token: response.token, 
-        user_id: response.user_id, 
-        defaultLocationName: details.defaultLocationName || null,
-        defaultLatitude: details.defaultLatitude || null,
-        defaultLongitude: details.defaultLongitude || null,
-        isLoading: false 
-      });
+      await authService.register(details);
+      set({ isLoading: false });
     } catch (error: any) {
       set({ 
         error: error.response?.data?.message || 'Registration failed. Please try again.',
