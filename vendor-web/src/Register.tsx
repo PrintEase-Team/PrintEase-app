@@ -47,8 +47,12 @@ export default function Register() {
       if (response.ok) {
         navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
       } else {
-        const errorData = await response.text();
-        setError('Registration failed. Please try again or use a different email.');
+        try {
+          const errorJson = await response.json();
+          setError(errorJson.message || 'Registration failed. Please try again.');
+        } catch {
+          setError('Registration failed. Please try again or use a different email.');
+        }
       }
     } catch (err) {
       console.error('Registration failed:', err);
