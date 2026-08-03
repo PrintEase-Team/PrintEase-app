@@ -70,8 +70,17 @@ public class JWTService {
         return extractClaim(token,  Claims::getExpiration);
     }
 
-    private  SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+    private SecretKey getSignInKey() {
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (IllegalArgumentException e) {
+            try {
+                keyBytes = Decoders.BASE64URL.decode(secretKey);
+            } catch (IllegalArgumentException ex) {
+                keyBytes = secretKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
