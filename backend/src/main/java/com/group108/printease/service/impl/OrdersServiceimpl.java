@@ -127,10 +127,10 @@ public class OrdersServiceimpl implements OrdersService {
                 settings.setCopies(fileDto.getCopies() != null ? fileDto.getCopies() : 1);
                 settings.setColor_mode(fileDto.getColor_option() != null && fileDto.getColor_option().equalsIgnoreCase("BW") 
                     ? Print_Settings.color_settings.Black_and_White : Print_Settings.color_settings.Colored);
-                settings.setSide(fileDto.getSided_option() != null && fileDto.getSided_option().equalsIgnoreCase("SINGLE") 
+                settings.setSided(fileDto.getSided_option() != null && fileDto.getSided_option().equalsIgnoreCase("SINGLE") 
                     ? Print_Settings.settings_side.Single_sided : Print_Settings.settings_side.Double_sided);
-                settings.setLamination(fileDto.getLamination() != null ? fileDto.getLamination() : false);
-                settings.setBinding(fileDto.getBinding() != null ? fileDto.getBinding() : false);
+                settings.setRequires_lamination(fileDto.getLamination() != null ? fileDto.getLamination() : false);
+                settings.setRequires_binding(fileDto.getBinding() != null ? fileDto.getBinding() : false);
                 printSettingsRepository.save(settings);
             }
         }
