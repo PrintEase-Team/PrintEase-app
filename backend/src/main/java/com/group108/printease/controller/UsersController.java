@@ -19,7 +19,7 @@ public class UsersController {
     private final UsersService usersService;
     private final JdbcTemplate jdbcTemplate;
 
-    @GetMapping("/fix-schema")
+    @GetMapping("/schema/fix")
     public ResponseEntity<String> fixSchema() {
         try {
             jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk8usegh22yymqae5jjt4pdbd3k CASCADE");
