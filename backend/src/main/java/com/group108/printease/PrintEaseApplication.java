@@ -19,11 +19,14 @@ public class PrintEaseApplication {
     public CommandLineRunner dropOldEmailConstraint(JdbcTemplate jdbcTemplate) {
         return args -> {
             try {
-                jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk8usegh22yymqae5jjt4pdb3k");
-                jdbcTemplate.execute("DROP INDEX IF EXISTS uk8usegh22yymqae5jjt4pdb3k");
-                jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS users_tbl_email_key");
-                jdbcTemplate.execute("DROP INDEX IF EXISTS users_tbl_email_key");
+                jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk8usegh22yymqae5jjt4pdb3k CASCADE");
+                jdbcTemplate.execute("DROP INDEX IF EXISTS uk8usegh22yymqae5jjt4pdb3k CASCADE");
+                jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS users_tbl_email_key CASCADE");
+                jdbcTemplate.execute("DROP INDEX IF EXISTS users_tbl_email_key CASCADE");
                 jdbcTemplate.execute("UPDATE users_tbl SET is_verified = true WHERE is_verified = false OR is_verified IS NULL");
+                jdbcTemplate.execute("DELETE FROM users_tbl WHERE user_id NOT IN (SELECT MIN(user_id) FROM users_tbl GROUP BY email, role)");
+                jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk_email_role CASCADE");
+                jdbcTemplate.execute("ALTER TABLE users_tbl ADD CONSTRAINT uk_email_role UNIQUE (email, role)");
             } catch (Exception e) {
                 System.out.println("Notice: Could not execute database startup maintenance: " + e.getMessage());
             }

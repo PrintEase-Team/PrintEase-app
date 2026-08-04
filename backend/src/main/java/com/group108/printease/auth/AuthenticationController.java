@@ -22,7 +22,10 @@ public class AuthenticationController {
             jdbcTemplate.execute("DROP INDEX IF EXISTS uk8usegh22yymqae5jjt4pdbd3k CASCADE");
             jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS users_tbl_email_key CASCADE");
             jdbcTemplate.execute("DROP INDEX IF EXISTS users_tbl_email_key CASCADE");
-            return ResponseEntity.ok("Schema fixed successfully!");
+            jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk_email_role CASCADE");
+            jdbcTemplate.execute("DELETE FROM users_tbl WHERE user_id NOT IN (SELECT MIN(user_id) FROM users_tbl GROUP BY email, role)");
+            jdbcTemplate.execute("ALTER TABLE users_tbl ADD CONSTRAINT uk_email_role UNIQUE (email, role)");
+            return ResponseEntity.ok("Schema fixed and deduplicated successfully!");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Schema fix error: " + e.getMessage());
         }
