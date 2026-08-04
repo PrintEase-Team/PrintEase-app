@@ -10,11 +10,27 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UsersController {
     private final UsersService usersService;
+    private final JdbcTemplate jdbcTemplate;
+
+    @GetMapping("/fix-schema")
+    public ResponseEntity<String> fixSchema() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk8usegh22yymqae5jjt4pdbd3k CASCADE");
+            jdbcTemplate.execute("DROP INDEX IF EXISTS uk8usegh22yymqae5jjt4pdbd3k CASCADE");
+            jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS users_tbl_email_key CASCADE");
+            jdbcTemplate.execute("DROP INDEX IF EXISTS users_tbl_email_key CASCADE");
+            return ResponseEntity.ok("Schema fixed successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Schema fix error: " + e.getMessage());
+        }
+    }
     //Build Add User Rest Api
     @PostMapping
     public ResponseEntity <UsersDto> createuser(@RequestBody UsersDto usersDto){
