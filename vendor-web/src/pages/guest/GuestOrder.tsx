@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Printer, Upload, CheckCircle2, FileText, CreditCard, ShieldCheck, 
-  ArrowLeft, Store, ChevronRight, Sliders, User, Phone, Mail, QrCode, 
-  Tag, Bell, Copy, Check, DollarSign, Wallet
+  ArrowLeft, ArrowRight, Store, ChevronRight, Sliders, User, Phone, Mail, QrCode, 
+  Tag, Bell, Copy, Check, DollarSign, Wallet, Lock, Camera, FolderOpen
 } from 'lucide-react';
 import styles from './GuestOrder.module.css';
 import { API_BASE_URL } from '../../config';
@@ -308,7 +308,9 @@ export default function GuestOrder() {
       {/* HEADER NAVBAR */}
       <div className={styles.header}>
         <div className={styles.brandRow}>
-          <img src="/web-logo-img.png" alt="PrintEase Logo" style={{ height: '40px', objectFit: 'contain' }} />
+          <div style={{ backgroundColor: '#0052FF', borderRadius: '8px', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Printer size={20} color="#FFFFFF" />
+          </div>
           <div>
             <h1 className={styles.brandName}>PrintEase Express</h1>
             <p className={styles.brandTagline}>Instant Counter Express Printing</p>
@@ -327,25 +329,31 @@ export default function GuestOrder() {
                 className={styles.backBtn}
                 onClick={() => setCurrentStep(prev => Math.max(prev - 1, 1))}
               >
-                <ArrowLeft size={18} /> Back
+                <ArrowLeft size={20} />
               </button>
-              <span className={styles.stepIndicatorText}>Step {currentStep - 1} of 4</span>
+              <h2 className={styles.stepTitle}>
+                {currentStep === 2 ? 'Upload File' : currentStep === 3 ? 'Print Settings' : currentStep === 4 ? 'Contact Details' : 'Payment'}
+              </h2>
             </div>
-            <div className={styles.progressBarTrack}>
+            <span className={styles.stepIndicatorText}>Step {currentStep - 1} of 4</span>
+            
+            <div className={styles.progressTrack}>
+              <div className={styles.progressTrackLine} />
               <div 
-                className={styles.progressBarFill} 
-                style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
+                className={styles.progressTrackLineFill} 
+                style={{ width: `${((currentStep - 2) / 3) * 100}%` }}
               />
+              {[1, 2, 3, 4].map(step => (
+                <div key={step} className={(currentStep - 1) >= step ? styles.progressDotActive : styles.progressDot} />
+              ))}
             </div>
           </div>
         )}
 
-        {/* STEP 1: WELCOME SPLASH & OFFICIAL RATE CARD TABLE (SCREENSHOT 1) */}
+        {/* STEP 1: WELCOME SPLASH & OFFICIAL RATE CARD TABLE */}
         {currentStep === 1 && (
           <div className={styles.splashCard}>
-            <div className={styles.splashHeroIcon}>
-              <Printer size={40} color="#0066FF" />
-            </div>
+            <Printer size={120} color="#0052FF" className={styles.splashHeroIcon} />
             <h2 className={styles.splashTitle}>Welcome to Express Print</h2>
             <p className={styles.splashDescription}>
               Upload files from your phone and collect your prints at the counter in minutes.
@@ -353,7 +361,7 @@ export default function GuestOrder() {
 
             {/* SHOP SELECTOR */}
             <div className={styles.shopCardBanner}>
-              <Store size={22} color="#0066FF" />
+              <Store size={22} color="#0052FF" />
               <div style={{ flex: 1 }}>
                 <span className={styles.shopBannerLabel}>SELECT PRINT SHOP</span>
                 <select 
@@ -363,7 +371,7 @@ export default function GuestOrder() {
                 >
                   {shops.map((s) => (
                     <option key={s.shop_id} value={s.shop_id}>
-                      {s.shop_name} ({s.location || 'Campus Counter'})
+                      {s.shop_name}
                     </option>
                   ))}
                 </select>
@@ -374,24 +382,28 @@ export default function GuestOrder() {
             {selectedShop && (
               <div className={styles.rateCardContainer}>
                 <div className={styles.rateCardTitle}>
-                  {(selectedShop.shop_name || 'SHOP').toUpperCase()} – OFFICIAL RATE CARD
+                  <Tag size={16} /> {(selectedShop.shop_name || 'SHOP').toUpperCase()} – OFFICIAL RATE CARD
                 </div>
 
                 {/* PRINTING SECTION */}
                 <div className={styles.rateTableGroup}>
                   <div className={styles.tableHeaderRow}>
+                    <span>TYPE</span>
+                    <span>PRICE (GHC)</span>
+                  </div>
+                  <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingBottom: '4px' }}>
                     <span>PRINTING</span>
-                    <span>PRICE (GH₵)</span>
+                    <span></span>
                   </div>
                   {selectedShop.supports_a4 !== false && (
                     <>
                       <div className={styles.tableBodyRow}>
                         <span>A4 Black & White</span>
-                        <strong>GH₵ {(selectedShop.price_a4_bw ?? 0.50).toFixed(2)}</strong>
+                        <strong>{(selectedShop.price_a4_bw ?? 0.50).toFixed(2)}</strong>
                       </div>
                       <div className={styles.tableBodyRow}>
                         <span>A4 Color</span>
-                        <strong>GH₵ {(selectedShop.price_a4_color ?? 1.00).toFixed(2)}</strong>
+                        <strong>{(selectedShop.price_a4_color ?? 1.00).toFixed(2)}</strong>
                       </div>
                     </>
                   )}
@@ -399,23 +411,11 @@ export default function GuestOrder() {
                     <>
                       <div className={styles.tableBodyRow}>
                         <span>A3 Black & White</span>
-                        <strong>GH₵ {(selectedShop.price_a3_bw ?? 0.80).toFixed(2)}</strong>
+                        <strong>{(selectedShop.price_a3_bw ?? 0.80).toFixed(2)}</strong>
                       </div>
                       <div className={styles.tableBodyRow}>
                         <span>A3 Color</span>
-                        <strong>GH₵ {(selectedShop.price_a3_color ?? 1.50).toFixed(2)}</strong>
-                      </div>
-                    </>
-                  )}
-                  {selectedShop.supports_letter && (
-                    <>
-                      <div className={styles.tableBodyRow}>
-                        <span>Letter Black & White</span>
-                        <strong>GH₵ {(selectedShop.price_letter_bw ?? 0.60).toFixed(2)}</strong>
-                      </div>
-                      <div className={styles.tableBodyRow}>
-                        <span>Letter Color</span>
-                        <strong>GH₵ {(selectedShop.price_letter_color ?? 1.20).toFixed(2)}</strong>
+                        <strong>{(selectedShop.price_a3_color ?? 1.50).toFixed(2)}</strong>
                       </div>
                     </>
                   )}
@@ -424,14 +424,14 @@ export default function GuestOrder() {
                 {/* BINDING SECTION */}
                 {selectedShop.supports_binding && (
                   <div className={styles.rateTableGroup}>
-                    <div className={styles.tableHeaderRow}>
+                    <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingTop: '16px', paddingBottom: '4px' }}>
                       <span>BINDING</span>
-                      <span>PRICE (GH₵)</span>
+                      <span></span>
                     </div>
                     {getBindingTiers(selectedShop.binding_pricing).map((tier, idx) => (
                       <div key={idx} className={styles.tableBodyRow}>
                         <span>Comb Binding ({tier.min}–{tier.max} pages)</span>
-                        <strong>GH₵ {(Number(tier.price) || 10.00).toFixed(2)}</strong>
+                        <strong>{(Number(tier.price) || 10.00).toFixed(2)}</strong>
                       </div>
                     ))}
                   </div>
@@ -440,18 +440,18 @@ export default function GuestOrder() {
                 {/* LAMINATION SECTION */}
                 {selectedShop.supports_lamination && (
                   <div className={styles.rateTableGroup}>
-                    <div className={styles.tableHeaderRow}>
+                    <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingTop: '16px', paddingBottom: '4px' }}>
                       <span>LAMINATION</span>
-                      <span>PRICE (GH₵)</span>
+                      <span></span>
                     </div>
                     <div className={styles.tableBodyRow}>
                       <span>Lamination A4</span>
-                      <strong>GH₵ {(selectedShop.price_lamination_a4 ?? 5.00).toFixed(2)}</strong>
+                      <strong>{(selectedShop.price_lamination_a4 ?? 5.00).toFixed(2)}</strong>
                     </div>
                     {selectedShop.supports_a3 && (
                       <div className={styles.tableBodyRow}>
                         <span>Lamination A3</span>
-                        <strong>GH₵ {(selectedShop.price_lamination_a3 ?? 8.00).toFixed(2)}</strong>
+                        <strong>{(selectedShop.price_lamination_a3 ?? 8.00).toFixed(2)}</strong>
                       </div>
                     )}
                   </div>
@@ -459,13 +459,13 @@ export default function GuestOrder() {
 
                 {/* SERVICES AVAILABLE BADGES */}
                 <div className={styles.servicesFooterRow}>
-                  <span className={styles.servicesFooterTitle}>Services Available:</span>
+                  <span className={styles.servicesFooterTitle}>SERVICES AVAILABLE</span>
                   <div className={styles.servicesBadgesList}>
-                    <span className={styles.badgeItem}><Printer size={14} /> Print</span>
-                    <span className={styles.badgeItem}><ShieldCheck size={14} /> Lamination</span>
-                    <span className={styles.badgeItem}><Copy size={14} /> Photocopy</span>
-                    <span className={styles.badgeItem}><FileText size={14} /> Scan</span>
-                    <span className={styles.badgeItem}><Tag size={14} /> Bind</span>
+                    <span className={styles.badgeItem}><Printer size={14} color="#0052FF" /> Print</span>
+                    <span className={styles.badgeItem}><ShieldCheck size={14} color="#0052FF" /> Lamination</span>
+                    <span className={styles.badgeItem}><FileText size={14} color="#0052FF" /> Photocopy</span>
+                    <span className={styles.badgeItem}><Upload size={14} color="#0052FF" /> Scan</span>
+                    <span className={styles.badgeItem}><Tag size={14} color="#0052FF" /> Bind</span>
                   </div>
                 </div>
               </div>
@@ -474,240 +474,273 @@ export default function GuestOrder() {
             <button 
               type="button"
               className={styles.primaryButton}
-              style={{ marginTop: '20px', height: '52px', fontSize: '16px' }}
+              style={{ marginTop: '24px' }}
               onClick={() => setCurrentStep(2)}
             >
-              Start Express Order <ChevronRight size={20} />
+              Start Express Order <ArrowRight size={20} />
             </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '13px', marginTop: '16px' }}>
+              <ShieldCheck size={16} /> Secure. Fast. Convenient.
+            </div>
           </div>
         )}
 
-        {/* STEP 2: UPLOAD DOCUMENT (SCREENSHOT 2) */}
+        {/* STEP 2: UPLOAD DOCUMENT */}
         {currentStep === 2 && (
-          <div className={styles.stepCard}>
-            <div className={styles.stepHeader}>
-              <Upload size={22} color="#0066FF" />
-              <h2>Upload Document</h2>
-            </div>
-            <p className={styles.stepSubtext}>Select a PDF or Image document to print</p>
-
+          <div>
             <div className={styles.uploadZoneBox}>
-              <div className={styles.uploadFileIconCircle}>
-                <FileText size={36} color="#0066FF" />
-              </div>
+              <Upload size={48} color="#0052FF" />
+              <h3 className={styles.uploadTitle}>Drag & drop your file here</h3>
+              <p className={styles.uploadOr}>or</p>
+              
+              <label className={styles.uploadFileBtn}>
+                <input 
+                  type="file" 
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                Choose File
+              </label>
 
-              {file ? (
-                <>
-                  <span className={styles.uploadedFileName}>{file.name}</span>
-                  <span className={styles.uploadedFileSize}>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
-                  <label className={styles.changeFileOutlineBtn}>
-                    <input 
-                      type="file" 
-                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                    />
-                    Change File
-                  </label>
-                </>
-              ) : (
-                <label className={styles.uploadFileInputLabel}>
-                  <input 
-                    type="file" 
-                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                  />
-                  Tap to select document
-                  <span className={styles.uploadSubtext}>Supports PDF, Word, PNG, JPG</span>
-                </label>
-              )}
+              <div className={styles.uploadSubtext}>
+                Supported formats
+                <span>PDF, JPG, PNG (Max 50MB)</span>
+              </div>
             </div>
 
             {file && (
               <div className={styles.fileSelectedSuccessBanner}>
                 <CheckCircle2 size={20} color="#16A34A" />
-                <span>Document attached ready for print configuration!</span>
+                <span>Selected: {file.name}</span>
               </div>
             )}
+
+            <div className={styles.uploadGrid}>
+              <button type="button" className={styles.uploadGridBtn} onClick={() => alert("Google Drive integration coming soon.")}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" style={{ width: 24, height: 24 }} />
+                Google Drive
+              </button>
+              <button type="button" className={styles.uploadGridBtn} onClick={() => alert("Dropbox integration coming soon.")}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/cb/Dropbox_logo_2017.svg" alt="Dropbox" style={{ width: 24, height: 24 }} />
+                Dropbox
+              </button>
+              <button type="button" className={styles.uploadGridBtn} onClick={() => alert("Camera API integration coming soon.")}>
+                <Camera size={24} color="#64748B" />
+                Take Photo
+              </button>
+              <button type="button" className={styles.uploadGridBtn} onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}>
+                <FolderOpen size={24} color="#64748B" />
+                Browse Files
+              </button>
+            </div>
+
+            <div className={styles.infoBlock}>
+              <ShieldCheck size={24} color="#0052FF" style={{ flexShrink: 0 }} />
+              <div>
+                <p className={styles.infoBlockText} style={{ fontWeight: 600, color: '#0F172A', marginBottom: '4px' }}>Your files are secure</p>
+                <p className={styles.infoBlockText}>and will be deleted after printing.</p>
+              </div>
+            </div>
 
             <button 
               type="button" 
               className={styles.primaryButton}
               disabled={!file}
               onClick={() => setCurrentStep(3)}
-              style={{ marginTop: '20px' }}
             >
-              Continue to Print Settings <ChevronRight size={18} />
+              Continue <ArrowRight size={20} />
             </button>
           </div>
         )}
 
-        {/* STEP 3: DYNAMIC PRINT SETTINGS (SCREENSHOT 3) */}
+        {/* STEP 3: PRINT SETTINGS */}
         {currentStep === 3 && (
-          <div className={styles.stepCard}>
-            <div className={styles.stepHeader}>
-              <Sliders size={22} color="#0066FF" />
-              <h2>Print Settings</h2>
-            </div>
-            <p className={styles.stepSubtext}>Reflecting dynamic rates for {selectedShop?.shop_name}</p>
-
-            <div className={styles.optionGrid}>
-              {/* COLOR MODE */}
-              <div className={styles.optionGroup}>
-                <label>COLOR MODE</label>
-                <div className={styles.toggleRow}>
-                  <button
-                    type="button"
-                    className={colorOption === 'BW' ? styles.activeToggle : styles.toggleBtn}
-                    onClick={() => setColorOption('BW')}
-                  >
-                    B & W
-                  </button>
-                  <button
-                    type="button"
-                    className={colorOption === 'COLOR' ? styles.activeToggle : styles.toggleBtn}
-                    onClick={() => setColorOption('COLOR')}
-                  >
-                    Color
-                  </button>
-                </div>
-              </div>
-
-              {/* NUMBER OF COPIES */}
-              <div className={styles.optionGroup}>
-                <label>NO. OF COPIES</label>
+          <div>
+            <div className={styles.settingsSection}>
+              <div className={styles.settingsLabel}>
+                Copies
                 <div className={styles.counterRow}>
-                  <button 
-                    type="button" 
-                    className={styles.counterBtn}
-                    onClick={() => setCopies(prev => Math.max(prev - 1, 1))}
-                  >
-                    -
-                  </button>
+                  <button type="button" className={styles.counterBtn} onClick={() => setCopies(prev => Math.max(prev - 1, 1))}>−</button>
                   <span className={styles.counterValue}>{copies}</span>
-                  <button 
-                    type="button" 
-                    className={styles.counterBtn}
-                    onClick={() => setCopies(prev => prev + 1)}
-                  >
-                    +
-                  </button>
+                  <button type="button" className={styles.counterBtn} onClick={() => setCopies(prev => prev + 1)}>+</button>
                 </div>
               </div>
+              <span className={styles.settingsSubLabel} style={{ display: 'block', marginTop: '-8px', marginBottom: '16px' }}>Number of copies</span>
+            </div>
 
-              {/* PRINT SIDES */}
-              <div className={styles.optionGroup}>
-                <label>PRINT SIDES</label>
-                <div className={styles.toggleRow}>
-                  <button
-                    type="button"
-                    className={sidedOption === 'SINGLE' ? styles.activeToggle : styles.toggleBtn}
-                    onClick={() => setSidedOption('SINGLE')}
-                  >
-                    Single-sided
-                  </button>
-                  <button
-                    type="button"
-                    className={sidedOption === 'DOUBLE' ? styles.activeToggle : styles.toggleBtn}
-                    onClick={() => setSidedOption('DOUBLE')}
-                  >
-                    Double-sided
-                  </button>
+            <div className={styles.settingsSection}>
+              <div className={styles.settingsLabel}>Color</div>
+              <div className={styles.optionGrid}>
+                <div className={colorOption === 'BW' ? styles.optionCardActive : styles.optionCard} onClick={() => setColorOption('BW')}>
+                  <div className={colorOption === 'BW' ? styles.optionCardRadioActive : styles.optionCardRadio} />
+                  <div style={{ display: 'flex', width: 20, height: 20, borderRadius: 10, background: 'linear-gradient(90deg, #000 50%, #fff 50%)', border: '1px solid #E2E8F0' }} />
+                  <div className={styles.optionCardContent}>
+                    <span className={styles.optionCardTitle}>Black & White</span>
+                    <span className={styles.optionCardPrice}>GH₵{(selectedShop?.price_a4_bw ?? 0.5).toFixed(2)} / page</span>
+                  </div>
+                </div>
+                <div className={colorOption === 'COLOR' ? styles.optionCardActive : styles.optionCard} onClick={() => setColorOption('COLOR')}>
+                  <div className={colorOption === 'COLOR' ? styles.optionCardRadioActive : styles.optionCardRadio} />
+                  <div style={{ display: 'flex', width: 20, height: 20, borderRadius: 10, background: 'conic-gradient(red, yellow, green, blue, red)' }} />
+                  <div className={styles.optionCardContent}>
+                    <span className={styles.optionCardTitle}>Color</span>
+                    <span className={styles.optionCardPrice}>GH₵{(selectedShop?.price_a4_color ?? 1.0).toFixed(2)} / page</span>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* PAPER SIZE */}
-              <div className={styles.optionGroup}>
-                <label>PAPER SIZE</label>
-                <select 
-                  className={styles.selectInput}
-                  value={paperSize}
-                  onChange={(e) => setPaperSize(e.target.value as any)}
-                >
-                  <option value="A4">A4 (GH₵ {(colorOption === 'COLOR' ? selectedShop?.price_a4_color ?? 1.0 : selectedShop?.price_a4_bw ?? 0.5).toFixed(2)}/pg)</option>
-                  <option value="A3">A3 (GH₵ {(colorOption === 'COLOR' ? selectedShop?.price_a3_color ?? 1.5 : selectedShop?.price_a3_bw ?? 0.8).toFixed(2)}/pg)</option>
-                  <option value="LETTER">Letter (GH₵ {(colorOption === 'COLOR' ? selectedShop?.price_letter_color ?? 1.2 : selectedShop?.price_letter_bw ?? 0.6).toFixed(2)}/pg)</option>
-                </select>
+            <div className={styles.settingsSection}>
+              <div className={styles.settingsLabel} style={{ marginBottom: '4px' }}>Pages</div>
+              <span style={{ fontSize: '12px', color: '#16A34A', display: 'block', marginBottom: '12px' }}>1 pages detected</span>
+              <div className={styles.pagesCardActive}>
+                <div className={styles.optionCardRadioActive} />
+                <span className={styles.pagesCardTitle}>All Pages (1 page)</span>
               </div>
             </div>
 
-            {/* DYNAMIC CHECKBOXES FOR COMB BINDING & LAMINATION */}
-            <div className={styles.checkboxContainerBox}>
-              <label className={styles.checkboxLabel}>
-                <input 
-                  type="checkbox" 
-                  checked={binding} 
-                  onChange={(e) => setBinding(e.target.checked)} 
-                />
-                Add Comb Binding (+ GH₵ {(Number(getBindingTiers(selectedShop?.binding_pricing)[0]?.price) || 10.00).toFixed(2)})
-              </label>
+            <div className={styles.settingsSection}>
+              <div className={styles.settingsLabel}>Paper Size</div>
+              <div className={styles.optionGrid}>
+                <div className={paperSize === 'A4' ? styles.optionCardActive : styles.optionCard} onClick={() => setPaperSize('A4')}>
+                  <div className={paperSize === 'A4' ? styles.optionCardRadioActive : styles.optionCardRadio} />
+                  <div className={styles.optionCardContent}>
+                    <span className={styles.optionCardTitle}>A4</span>
+                    <span className={styles.optionCardPrice}>210 × 297 mm</span>
+                  </div>
+                </div>
+                {selectedShop?.supports_a3 && (
+                  <div className={paperSize === 'A3' ? styles.optionCardActive : styles.optionCard} onClick={() => setPaperSize('A3')}>
+                    <div className={paperSize === 'A3' ? styles.optionCardRadioActive : styles.optionCardRadio} />
+                    <div className={styles.optionCardContent}>
+                      <span className={styles.optionCardTitle}>A3</span>
+                      <span className={styles.optionCardPrice}>297 × 420 mm</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
-              <label className={styles.checkboxLabel}>
-                <input 
-                  type="checkbox" 
-                  checked={lamination} 
-                  onChange={(e) => setLamination(e.target.checked)} 
-                />
-                Add Laminating Cover (+ GH₵ {(paperSize === 'A3' ? selectedShop?.price_lamination_a3 ?? 8.0 : selectedShop?.price_lamination_a4 ?? 5.0).toFixed(2)})
+            <div className={styles.settingsSection}>
+              <div className={styles.settingsLabel}>Orientation</div>
+              <div className={styles.optionGrid}>
+                <div className={styles.optionCardActive}>
+                  <div className={styles.optionCardRadioActive} />
+                  <FileText size={18} color="#0052FF" />
+                  <span className={styles.optionCardTitle} style={{ color: '#0052FF' }}>Portrait</span>
+                </div>
+                <div className={styles.optionCard}>
+                  <div className={styles.optionCardRadio} />
+                  <FileText size={18} color="#64748B" style={{ transform: 'rotate(-90deg)' }} />
+                  <span className={styles.optionCardTitle}>Landscape</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <span className={styles.toggleTitle}>Double-sided Printing</span>
+                <span className={styles.toggleSub}>Print on both sides of the paper</span>
+              </div>
+              <label className={styles.switch}>
+                <input type="checkbox" checked={sidedOption === 'DOUBLE'} onChange={(e) => setSidedOption(e.target.checked ? 'DOUBLE' : 'SINGLE')} />
+                <span className={styles.slider}></span>
               </label>
             </div>
 
-            {/* LIVE PRICE TOTAL BANNER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#EFF6FF', padding: '12px 16px', borderRadius: '12px', marginTop: '8px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#1E40AF' }}>Configured Order Cost:</span>
-              <strong style={{ fontSize: '18px', fontWeight: 800, color: '#0066FF' }}>GH₵ {calculatedCost.toFixed(2)}</strong>
-            </div>
+            {selectedShop?.supports_lamination && (
+              <div className={styles.toggleRow}>
+                <div className={styles.toggleInfo}>
+                  <span className={styles.toggleTitle}>Lamination</span>
+                  <span className={styles.toggleSub}>Laminate each printed sheet</span>
+                </div>
+                <label className={styles.switch}>
+                  <input type="checkbox" checked={lamination} onChange={(e) => setLamination(e.target.checked)} />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
+            )}
 
-            <button 
-              type="button" 
-              className={styles.primaryButton}
-              onClick={() => setCurrentStep(4)}
-              style={{ marginTop: '16px' }}
-            >
-              Continue to Contact Info <ChevronRight size={18} />
-            </button>
+            {selectedShop?.supports_binding && (
+              <div className={styles.toggleRow}>
+                <div className={styles.toggleInfo}>
+                  <span className={styles.toggleTitle}>Comb Binding</span>
+                  <span className={styles.toggleSub}>Bind all printed sheets together</span>
+                </div>
+                <label className={styles.switch}>
+                  <input type="checkbox" checked={binding} onChange={(e) => setBinding(e.target.checked)} />
+                  <span className={styles.slider}></span>
+                </label>
+              </div>
+            )}
+
+            <div className={styles.footerBar}>
+              <div className={styles.footerTotalBox}>
+                <span className={styles.footerTotalLabel}>Estimated Total</span>
+                <span className={styles.footerTotalValue}>GH₵{calculatedCost.toFixed(2)}</span>
+                <span className={styles.footerTotalDetails}>1 pages • {copies} copies</span>
+              </div>
+              <button 
+                type="button" 
+                className={styles.secondaryButton}
+                onClick={() => setCurrentStep(4)}
+              >
+                Continue <ArrowRight size={18} style={{ verticalAlign: 'middle', marginLeft: '4px' }} />
+              </button>
+            </div>
           </div>
         )}
 
         {/* STEP 4: CONTACT DETAILS */}
         {currentStep === 4 && (
-          <div className={styles.stepCard}>
-            <div className={styles.stepHeader}>
-              <User size={22} color="#0066FF" />
-              <h2>Your Contact Details</h2>
-            </div>
-            <p className={styles.stepSubtext}>Used for pickup SMS alert and receipt</p>
-
+          <div>
             <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Full Name</label>
-              <input
-                type="text"
-                placeholder="Enter your full name"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className={styles.textInput}
-                required
-              />
+              <div className={styles.inputField}>
+                <label className={styles.inputLabel}>Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Buttoski Mike"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  className={styles.textInput}
+                  required
+                />
+              </div>
 
-              <label className={styles.inputLabel}>Phone Number</label>
-              <input
-                type="tel"
-                placeholder="e.g. 0541234567 (for SMS alert)"
-                value={guestPhone}
-                onChange={(e) => setGuestPhone(e.target.value)}
-                className={styles.textInput}
-                required
-              />
+              <div className={styles.inputField}>
+                <label className={styles.inputLabel}>Phone Number</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 0536990842"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  className={styles.textInput}
+                  required
+                />
+              </div>
 
-              <label className={styles.inputLabel}>Email Address (Optional)</label>
-              <input
-                type="email"
-                placeholder="Enter email for digital receipt"
-                value={guestEmail}
-                onChange={(e) => setGuestEmail(e.target.value)}
-                className={styles.textInput}
-              />
+              <div className={styles.inputField}>
+                <label className={styles.inputLabel}>Email Address (Optional)</label>
+                <input
+                  type="email"
+                  placeholder="e.g. iambuttoski@gmail.com"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  className={styles.textInput}
+                />
+              </div>
+            </div>
+
+            <div className={styles.infoBlock}>
+              <ShieldCheck size={24} color="#0052FF" style={{ flexShrink: 0 }} />
+              <div>
+                <p className={styles.infoBlockText} style={{ fontWeight: 600, color: '#0F172A', marginBottom: '8px' }}>Why we need this?</p>
+                <ul className={styles.infoBlockList}>
+                  <li>SMS alert when your document is ready</li>
+                  <li>Payment receipt will be sent to you</li>
+                </ul>
+              </div>
             </div>
 
             <button 
@@ -715,97 +748,97 @@ export default function GuestOrder() {
               className={styles.primaryButton}
               disabled={!guestName || !guestPhone}
               onClick={() => setCurrentStep(5)}
-              style={{ marginTop: '20px' }}
             >
-              Review Payment Method <ChevronRight size={18} />
+              Review Order Summary <ArrowRight size={20} />
             </button>
           </div>
         )}
 
-        {/* STEP 5: PAYMENT METHOD & FINAL ORDER CONFIRMATION */}
+        {/* STEP 5: PAYMENT */}
         {currentStep === 5 && (
-          <div className={styles.stepCard}>
-            <div className={styles.stepHeader}>
-              <CreditCard size={22} color="#0066FF" />
-              <h2>Payment & Order Confirmation</h2>
-            </div>
-            <p className={styles.stepSubtext}>Select payment method and confirm express order</p>
-
-            <div className={styles.summaryDetails}>
-              <div className={styles.detailRow}>
-                <span>Print Shop:</span>
-                <strong>{selectedShop?.shop_name || 'Selected Shop'}</strong>
+          <div>
+            <div className={styles.summaryCard}>
+              <h3 className={styles.summaryTitle}>Order Summary</h3>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryRowLabel}>Print Shop</span>
+                <span className={styles.summaryRowValue}>{selectedShop?.shop_name || 'Selected Shop'}</span>
               </div>
-              <div className={styles.detailRow}>
-                <span>Document:</span>
-                <strong>{file?.name}</strong>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryRowLabel}>Document</span>
+                <span className={styles.summaryRowValue}>{file?.name}</span>
               </div>
-              <div className={styles.detailRow}>
-                <span>Print Configuration:</span>
-                <strong>{paperSize}, {colorOption === 'COLOR' ? 'Color' : 'B&W'}, {copies} copy({copies > 1 ? 'ies' : ''}), {sidedOption === 'DOUBLE' ? '2-Sided' : '1-Sided'}</strong>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryRowLabel}>Print Options</span>
+                <span className={styles.summaryRowValue}>{paperSize}, {colorOption === 'COLOR' ? 'Color' : 'B&W'}, {copies} copy, {sidedOption === 'DOUBLE' ? 'Double-sided' : 'Single-sided'}</span>
               </div>
-              <div className={styles.detailRow}>
-                <span>Add-ons:</span>
-                <strong>{[binding ? 'Comb Binding' : null, lamination ? 'Lamination Cover' : null].filter(Boolean).join(', ') || 'None'}</strong>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryRowLabel}>Pages</span>
+                <span className={styles.summaryRowValue}>1 page</span>
               </div>
-              <div className={styles.detailRow}>
-                <span>Guest Contact:</span>
-                <strong>{guestName} ({guestPhone})</strong>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryRowLabel}>Guest Contact</span>
+                <span className={styles.summaryRowValue}>{guestName} ({guestPhone})</span>
               </div>
-              <div className={styles.detailRow} style={{ paddingTop: '8px', borderTop: '1px solid #CBD5E1' }}>
-                <span style={{ fontSize: '15px', fontWeight: 700 }}>Total Cost:</span>
-                <strong className={styles.priceText} style={{ fontSize: '20px' }}>GH₵ {calculatedCost.toFixed(2)}</strong>
+              <div className={styles.summaryTotalRow}>
+                <span className={styles.summaryTotalLabel}>Total Amount</span>
+                <span className={styles.summaryTotalValue}>GH₵{calculatedCost.toFixed(2)}</span>
               </div>
             </div>
 
-            {/* PAYMENT METHOD SELECTOR */}
-            <div className={styles.paymentMethodGroup}>
-              <label className={styles.inputLabel}>CHOOSE PAYMENT METHOD</label>
-              
-              <div 
-                className={paymentMethod === 'PAYSTACK' ? styles.paymentCardActive : styles.paymentCard}
-                onClick={() => setPaymentMethod('PAYSTACK')}
-              >
-                <CreditCard size={24} color="#0066FF" />
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 700, fontSize: '14px', display: 'block', color: '#0F172A' }}>
-                    Paystack Online Payment
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#64748B' }}>
-                    Mobile Money (MTN, Telecel, AT) or Bank Card
-                  </span>
-                </div>
-                <div className={paymentMethod === 'PAYSTACK' ? styles.radioSelected : styles.radioUnselected} />
+            <h3 className={styles.paymentSectionTitle}>Choose Payment Method</h3>
+            
+            <div 
+              className={paymentMethod === 'PAYSTACK' ? styles.paymentCardActive : styles.paymentCard}
+              onClick={() => setPaymentMethod('PAYSTACK')}
+            >
+              <div className={paymentMethod === 'PAYSTACK' ? styles.optionCardRadioActive : styles.optionCardRadio} />
+              <div className={styles.paymentIconBox}>
+                <CreditCard size={20} color="#0052FF" />
               </div>
+              <div className={styles.paymentInfo}>
+                <span className={styles.paymentTitle}>Pay with Card (Paystack)</span>
+                <span className={styles.paymentSub}>Debit/credit cards, mobile money and more</span>
+              </div>
+              <ArrowRight size={16} color="#CBD5E1" />
+            </div>
 
-              <div 
-                className={paymentMethod === 'CASH' ? styles.paymentCardActive : styles.paymentCard}
-                onClick={() => setPaymentMethod('CASH')}
-              >
-                <Wallet size={24} color="#16A34A" />
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 700, fontSize: '14px', display: 'block', color: '#0F172A' }}>
-                    Pay Cash at Counter
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#64748B' }}>
-                    Pay vendor directly upon physical pickup
-                  </span>
-                </div>
-                <div className={paymentMethod === 'CASH' ? styles.radioSelected : styles.radioUnselected} />
+            <div 
+              className={paymentMethod === 'CASH' ? styles.paymentCardActive : styles.paymentCard}
+              onClick={() => setPaymentMethod('CASH')}
+            >
+              <div className={paymentMethod === 'CASH' ? styles.optionCardRadioActive : styles.optionCardRadio} />
+              <div className={styles.paymentIconBox}>
+                <Wallet size={20} color="#16A34A" />
+              </div>
+              <div className={styles.paymentInfo}>
+                <span className={styles.paymentTitle}>Pay with Cash</span>
+                <span className={styles.paymentSub}>Pay at the print shop</span>
+              </div>
+              <ArrowRight size={16} color="#CBD5E1" />
+            </div>
+
+            <div className={styles.infoBlock} style={{ marginTop: '24px', marginBottom: '24px' }}>
+              <ShieldCheck size={24} color="#0052FF" style={{ flexShrink: 0 }} />
+              <div>
+                <p className={styles.infoBlockText} style={{ fontWeight: 600, color: '#0F172A', marginBottom: '4px' }}>Your order is secure</p>
+                <p className={styles.infoBlockText}>Your payment information is encrypted and safe.</p>
               </div>
             </div>
 
             <button 
               type="button" 
-              disabled={isSubmitting}
               className={styles.primaryButton}
+              disabled={isSubmitting}
               onClick={handlePayAndSubmit}
-              style={{ height: '54px', fontSize: '16px', marginTop: '12px' }}
             >
-              {isSubmitting ? 'Processing Order...' : paymentMethod === 'PAYSTACK' ? `Pay GH₵ ${calculatedCost.toFixed(2)} with Paystack` : `Submit Express Order (GH₵ ${calculatedCost.toFixed(2)})`}
+              <Lock size={18} />
+              Pay GH₵{calculatedCost.toFixed(2)} & Send Order
             </button>
+            
+            <p className={styles.footerNote}>You will be redirected to a secure payment page</p>
           </div>
         )}
+
       </div>
     </div>
   );
