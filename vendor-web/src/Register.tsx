@@ -45,7 +45,10 @@ export default function Register() {
       });
 
       if (response.ok) {
-        navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        if (data.token) localStorage.setItem('vendor_token', data.token);
+        if (data.userId || data.user_id) localStorage.setItem('vendor_id', data.userId || data.user_id);
+        navigate('/dashboard');
       } else {
         try {
           const errorJson = await response.json();

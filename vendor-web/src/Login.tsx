@@ -48,11 +48,6 @@ export default function Login() {
           if (errObj.message) errorMsg = errObj.message;
         } catch (e) {}
 
-        if (errorMsg.toLowerCase().includes('verify') || errorMsg.toLowerCase().includes('otp')) {
-          navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
-          return;
-        }
-
         setError(errorMsg);
       }
     } catch (err) {

@@ -36,15 +36,7 @@ export default function LoginScreen() {
       await login({ email, password });
       router.replace('/(tabs)');
     } catch (e: any) {
-      const errMsg = useAuthStore.getState().error || 'Invalid credentials';
-      if (errMsg.toLowerCase().includes('verify') || errMsg.toLowerCase().includes('otp')) {
-        Alert.alert('Verification Required', errMsg, [
-          { text: 'Verify OTP', onPress: () => router.push({ pathname: '/verify-otp', params: { email } } as any) },
-          { text: 'Cancel', style: 'cancel' }
-        ]);
-      } else {
-        Alert.alert('Login Failed', errMsg);
-      }
+      Alert.alert('Login Failed', errMsg);
     }
   };
 
