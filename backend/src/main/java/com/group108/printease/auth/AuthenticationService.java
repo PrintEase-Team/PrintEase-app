@@ -42,15 +42,12 @@ public class AuthenticationService {
                 .password_hash(passwordEncoder.encode(request.getPassword()))
                 .phone_number(request.getPhoneNumber())
                 .role(userRole)
-                .is_verified(false)
+                .is_verified(true)
                 .default_location_name(request.getDefaultLocationName())
                 .default_latitude(request.getDefaultLatitude())
                 .default_longitude(request.getDefaultLongitude())
                 .build();
         var savedUser = repository.save(user);
-
-        // Generate & send OTP for verification
-        otpService.generateAndSendOtp(savedUser.getEmail());
 
         // Auto-create shop if vendor
         if (userRole == Users.user_role.Admin) {
@@ -88,10 +85,6 @@ public class AuthenticationService {
         Users user = repository.findByEmailAndRole(request.getEmail(), finalRole)
                 .or(() -> repository.findByEmail(request.getEmail()))
                 .orElseThrow(()-> new UsernameNotFoundException("User does not exist with email: " + request.getEmail()));
-
-        if (!user.is_verified()) {
-            throw new IllegalArgumentException("Email not verified. Please verify your OTP code first.");
-        }
 
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
