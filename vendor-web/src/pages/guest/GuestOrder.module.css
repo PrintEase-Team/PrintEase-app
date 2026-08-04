@@ -20,16 +20,6 @@
   gap: 12px;
 }
 
-.logoBadge {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background-color: #E6F0FF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .brandName {
   font-size: 22px;
   font-weight: 700;
@@ -104,7 +94,7 @@
   border-radius: 20px;
   border: 1px solid #E2E8F0;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-  padding: 32px 24px;
+  padding: 28px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -112,28 +102,28 @@
 }
 
 .splashHeroIcon {
-  width: 80px;
-  height: 80px;
-  border-radius: 40px;
+  width: 72px;
+  height: 72px;
+  border-radius: 36px;
   background-color: #E6F0FF;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .splashTitle {
   font-size: 22px;
   font-weight: 800;
   color: #0F172A;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
 }
 
 .splashDescription {
   font-size: 14px;
   color: #64748B;
   line-height: 1.5;
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
 }
 
 .shopCardBanner {
@@ -141,7 +131,7 @@
   background-color: #F1F5F9;
   border: 1px solid #CBD5E1;
   border-radius: 14px;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -168,6 +158,73 @@
   font-weight: 600;
   color: #0F172A;
   outline: none;
+}
+
+/* DYNAMIC SHOP RATE CARD */
+.dynamicPriceCard {
+  width: 100%;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.priceCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.priceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.priceTagItem {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.priceTagItem span {
+  color: #64748B;
+  font-weight: 600;
+}
+
+.priceTagItem strong {
+  color: #0066FF;
+  font-weight: 700;
+}
+
+.servicesRow {
+  border-top: 1px dashed #CBD5E1;
+  padding-top: 8px;
+  font-size: 12px;
+}
+
+.servicesTitle {
+  font-weight: 700;
+  color: #334155;
+  margin-right: 6px;
+}
+
+.servicesText {
+  color: #64748B;
 }
 
 /* STEP CARD */

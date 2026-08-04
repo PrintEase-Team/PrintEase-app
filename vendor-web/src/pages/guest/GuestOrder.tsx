@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Printer, Upload, CheckCircle2, FileText, CreditCard, ShieldCheck, ArrowLeft, Store, ChevronRight, Sparkles, Layers, Sliders, Check, Phone, User, Mail, QrCode } from 'lucide-react';
+import { Printer, Upload, CheckCircle2, FileText, CreditCard, ShieldCheck, ArrowLeft, Store, ChevronRight, Sparkles, Layers, Sliders, Check, Phone, User, Mail, QrCode, Tag, CheckCircle } from 'lucide-react';
 import styles from './GuestOrder.module.css';
 import { API_BASE_URL } from '../../config';
 
@@ -9,6 +9,21 @@ interface PrintShop {
   shop_name: string;
   location: string;
   is_active: boolean;
+  services_offered?: string;
+  price_a4_bw?: number;
+  price_a4_color?: number;
+  price_a3_bw?: number;
+  price_a3_color?: number;
+  price_letter_bw?: number;
+  price_letter_color?: number;
+  supports_a4?: boolean;
+  supports_a3?: boolean;
+  supports_letter?: boolean;
+  supports_binding?: boolean;
+  supports_lamination?: boolean;
+  price_lamination_a4?: number;
+  price_lamination_a3?: number;
+  price_lamination_letter?: number;
 }
 
 export default function GuestOrder() {
@@ -19,8 +34,7 @@ export default function GuestOrder() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [shops, setShops] = useState<PrintShop[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<string>(shopIdFromUrl || '');
-  const [selectedShopName, setSelectedShopName] = useState<string>('');
-  const [selectedShopLocation, setSelectedShopLocation] = useState<string>('');
+  const [selectedShop, setSelectedShop] = useState<PrintShop | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [copies, setCopies] = useState(1);
@@ -38,9 +52,9 @@ export default function GuestOrder() {
   const [orderComplete, setOrderComplete] = useState(false);
   const [pickupCode, setPickupCode] = useState('');
   const [orderId, setOrderId] = useState('');
-  const [calculatedCost, setCalculatedCost] = useState(2.0);
+  const [calculatedCost, setCalculatedCost] = useState(0.5);
 
-  // Fetch shop list & preselect if URL contains shopId
+  // Fetch shop list & preselect
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/shops`)
       .then((res) => res.json())
@@ -50,8 +64,7 @@ export default function GuestOrder() {
           if (shopIdFromUrl) {
             const found = data.find((s: PrintShop) => s.shop_id === shopIdFromUrl);
             if (found) {
-              setSelectedShopName(found.shop_name);
-              setSelectedShopLocation(found.location || 'Campus Counter');
+              setSelectedShop(found);
             }
           }
         }
@@ -59,30 +72,57 @@ export default function GuestOrder() {
       .catch((err) => console.error('Error fetching shops:', err));
   }, [shopIdFromUrl]);
 
-  // Calculate price dynamically
-  useEffect(() => {
-    let pageCost = colorOption === 'COLOR' ? 1.5 : 0.5;
-    if (sidedOption === 'DOUBLE') pageCost *= 1.5;
-    if (paperSize === 'A3') pageCost *= 2.0;
-    
-    let total = pageCost * copies * 5; // Default 5 page estimate
-    if (binding) total += 5.0;
-    if (lamination) total += 3.0;
-    setCalculatedCost(Math.max(total, 1.0));
-  }, [copies, colorOption, sidedOption, paperSize, binding, lamination]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
   const handleSelectShop = (shopId: string) => {
     setSelectedShopId(shopId);
     const found = shops.find((s) => s.shop_id === shopId);
     if (found) {
-      setSelectedShopName(found.shop_name);
-      setSelectedShopLocation(found.location || 'Campus Counter');
+      setSelectedShop(found);
+      // Auto-set default supported paper size
+      if (found.supports_a4 !== false) setPaperSize('A4');
+      else if (found.supports_a3) setPaperSize('A3');
+      else if (found.supports_letter) setPaperSize('LETTER');
+    }
+  };
+
+  // Calculate dynamic shop-specific cost
+  useEffect(() => {
+    if (!selectedShop) {
+      setCalculatedCost(1.0);
+      return;
+    }
+
+    let unitPrice = 0.5;
+    if (paperSize === 'A4') {
+      unitPrice = colorOption === 'COLOR' ? (selectedShop.price_a4_color ?? 1.0) : (selectedShop.price_a4_bw ?? 0.5);
+    } else if (paperSize === 'A3') {
+      unitPrice = colorOption === 'COLOR' ? (selectedShop.price_a3_color ?? 2.0) : (selectedShop.price_a3_bw ?? 1.0);
+    } else if (paperSize === 'LETTER') {
+      unitPrice = colorOption === 'COLOR' ? (selectedShop.price_letter_color ?? 1.2) : (selectedShop.price_letter_bw ?? 0.6);
+    }
+
+    if (sidedOption === 'DOUBLE') {
+      unitPrice *= 1.5;
+    }
+
+    let total = unitPrice * copies * 5; // Default 5 page estimate
+
+    if (binding && selectedShop.supports_binding) {
+      total += 12.0; // Standard binding rate
+    }
+
+    if (lamination && selectedShop.supports_lamination) {
+      const lamPrice = paperSize === 'A3' 
+        ? (selectedShop.price_lamination_a3 ?? 8.0) 
+        : (selectedShop.price_lamination_a4 ?? 5.0);
+      total += lamPrice;
+    }
+
+    setCalculatedCost(Math.max(total, 0.5));
+  }, [selectedShop, copies, colorOption, sidedOption, paperSize, binding, lamination]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
     }
   };
 
@@ -168,7 +208,7 @@ export default function GuestOrder() {
           </div>
           <h1 className={styles.successTitle}>Express Order Sent!</h1>
           <p className={styles.successSubtitle}>
-            Your document is ready for printing at <strong>{selectedShopName || 'the print shop'}</strong>.
+            Your document is ready for printing at <strong>{selectedShop?.shop_name || 'the print shop'}</strong>.
           </p>
 
           {/* 6-DIGIT PICKUP CODE BOX */}
@@ -219,21 +259,19 @@ export default function GuestOrder() {
 
   return (
     <div className={styles.container}>
-      {/* HEADER NAVBAR */}
+      {/* OFFICIAL PRINTEASE LOGO HEADER */}
       <div className={styles.header}>
         <div className={styles.brandRow}>
-          <div className={styles.logoBadge}>
-            <Printer size={24} color="#0066FF" />
-          </div>
+          <img src="/web-logo-img.png" alt="PrintEase Logo" style={{ height: '44px', objectFit: 'contain' }} />
           <div>
             <h1 className={styles.brandName}>PrintEase Express</h1>
-            <p className={styles.brandTagline}>Instant Mobile Printing • No App Required</p>
+            <p className={styles.brandTagline}>Instant Counter Express Printing</p>
           </div>
         </div>
       </div>
 
       <div className={styles.wizardContainer}>
-        {/* STEP PROGRESS INDICATOR (Steps 2 - 5) */}
+        {/* STEP PROGRESS INDICATOR */}
         {currentStep > 1 && (
           <div className={styles.progressHeader}>
             <div className={styles.progressTopRow}>
@@ -255,28 +293,28 @@ export default function GuestOrder() {
           </div>
         )}
 
-        {/* STEP 1: WELCOME SPLASH SCREEN */}
+        {/* STEP 1: WELCOME SPLASH & DYNAMIC SHOP PRICING */}
         {currentStep === 1 && (
           <div className={styles.splashCard}>
             <div className={styles.splashHeroIcon}>
-              <Printer size={48} color="#0066FF" />
+              <Printer size={44} color="#0066FF" />
             </div>
-            <h2 className={styles.splashTitle}>Welcome to PrintEase Express</h2>
+            <h2 className={styles.splashTitle}>Welcome to Express Print</h2>
             <p className={styles.splashDescription}>
-              Skip the long queues! Upload your files directly from your phone and collect your prints at the counter in minutes.
+              Upload files from your phone and collect your prints at the counter in minutes.
             </p>
 
-            {/* SHOP SELECTOR / DISPLAY */}
+            {/* SHOP SELECTOR */}
             <div className={styles.shopCardBanner}>
               <Store size={22} color="#0066FF" />
               <div style={{ flex: 1 }}>
-                <span className={styles.shopBannerLabel}>PRINTING AT</span>
+                <span className={styles.shopBannerLabel}>SELECT PRINT SHOP</span>
                 <select 
                   className={styles.shopSelectDropdown}
                   value={selectedShopId}
                   onChange={(e) => handleSelectShop(e.target.value)}
                 >
-                  <option value="">-- Select Print Shop --</option>
+                  <option value="">-- Choose Print Shop --</option>
                   {shops.map((s) => (
                     <option key={s.shop_id} value={s.shop_id}>
                       {s.shop_name} ({s.location || 'Campus Counter'})
@@ -285,6 +323,65 @@ export default function GuestOrder() {
                 </select>
               </div>
             </div>
+
+            {/* DYNAMIC SHOP PRICE LIST TABLE */}
+            {selectedShop && (
+              <div className={styles.dynamicPriceCard}>
+                <div className={styles.priceCardHeader}>
+                  <Tag size={16} color="#0066FF" />
+                  <span>{selectedShop.shop_name} • Official Rate Card</span>
+                </div>
+
+                <div className={styles.priceGrid}>
+                  {selectedShop.supports_a4 !== false && (
+                    <>
+                      <div className={styles.priceTagItem}>
+                        <span>A4 B&W</span>
+                        <strong>GH₵ {(selectedShop.price_a4_bw ?? 0.50).toFixed(2)}</strong>
+                      </div>
+                      <div className={styles.priceTagItem}>
+                        <span>A4 Color</span>
+                        <strong>GH₵ {(selectedShop.price_a4_color ?? 1.00).toFixed(2)}</strong>
+                      </div>
+                    </>
+                  )}
+
+                  {selectedShop.supports_a3 && (
+                    <>
+                      <div className={styles.priceTagItem}>
+                        <span>A3 B&W</span>
+                        <strong>GH₵ {(selectedShop.price_a3_bw ?? 1.00).toFixed(2)}</strong>
+                      </div>
+                      <div className={styles.priceTagItem}>
+                        <span>A3 Color</span>
+                        <strong>GH₵ {(selectedShop.price_a3_color ?? 2.00).toFixed(2)}</strong>
+                      </div>
+                    </>
+                  )}
+
+                  {selectedShop.supports_letter && (
+                    <>
+                      <div className={styles.priceTagItem}>
+                        <span>Letter B&W</span>
+                        <strong>GH₵ {(selectedShop.price_letter_bw ?? 0.60).toFixed(2)}</strong>
+                      </div>
+                      <div className={styles.priceTagItem}>
+                        <span>Letter Color</span>
+                        <strong>GH₵ {(selectedShop.price_letter_color ?? 1.20).toFixed(2)}</strong>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* SERVICES OFFERED BADGES */}
+                {selectedShop.services_offered && (
+                  <div className={styles.servicesRow}>
+                    <span className={styles.servicesTitle}>Services Available:</span>
+                    <span className={styles.servicesText}>{selectedShop.services_offered}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button 
               type="button"
@@ -298,7 +395,7 @@ export default function GuestOrder() {
                 setCurrentStep(2);
               }}
             >
-              Start Express Print Order <ChevronRight size={20} />
+              Start Express Order <ChevronRight size={20} />
             </button>
           </div>
         )}
@@ -349,14 +446,14 @@ export default function GuestOrder() {
           </div>
         )}
 
-        {/* STEP 3: PRINT SETTINGS */}
+        {/* STEP 3: DYNAMIC SHOP PRINT SETTINGS */}
         {currentStep === 3 && (
           <div className={styles.stepCard}>
             <div className={styles.stepHeader}>
               <Sliders size={24} color="#0066FF" />
               <h2>Print Settings</h2>
             </div>
-            <p className={styles.stepSubtext}>Configure color, copies, and paper options</p>
+            <p className={styles.stepSubtext}>Reflecting dynamic rates for {selectedShop?.shop_name}</p>
 
             <div className={styles.optionGrid}>
               {/* Color Mode */}
@@ -423,7 +520,7 @@ export default function GuestOrder() {
                 </div>
               </div>
 
-              {/* Paper Size */}
+              {/* DYNAMIC PAPER SIZE */}
               <div className={styles.optionGroup}>
                 <label>PAPER SIZE</label>
                 <select 
@@ -431,32 +528,44 @@ export default function GuestOrder() {
                   value={paperSize}
                   onChange={(e) => setPaperSize(e.target.value as any)}
                 >
-                  <option value="A4">A4 Standard</option>
-                  <option value="A3">A3 Poster (+GH₵ 1.50)</option>
-                  <option value="LETTER">Letter Size</option>
+                  {selectedShop?.supports_a4 !== false && (
+                    <option value="A4">A4 (GH₵ {(colorOption === 'COLOR' ? selectedShop?.price_a4_color ?? 1.0 : selectedShop?.price_a4_bw ?? 0.5).toFixed(2)}/pg)</option>
+                  )}
+                  {selectedShop?.supports_a3 && (
+                    <option value="A3">A3 Poster (GH₵ {(colorOption === 'COLOR' ? selectedShop?.price_a3_color ?? 2.0 : selectedShop?.price_a3_bw ?? 1.0).toFixed(2)}/pg)</option>
+                  )}
+                  {selectedShop?.supports_letter && (
+                    <option value="LETTER">Letter Size (GH₵ {(colorOption === 'COLOR' ? selectedShop?.price_letter_color ?? 1.2 : selectedShop?.price_letter_bw ?? 0.6).toFixed(2)}/pg)</option>
+                  )}
                 </select>
               </div>
             </div>
 
-            {/* Finishing Add-ons */}
-            <div className={styles.checkboxRow}>
-              <label className={styles.checkboxLabel}>
-                <input 
-                  type="checkbox" 
-                  checked={binding} 
-                  onChange={(e) => setBinding(e.target.checked)} 
-                />
-                Add Spiral Binding (+ GH₵ 5.00)
-              </label>
-              <label className={styles.checkboxLabel}>
-                <input 
-                  type="checkbox" 
-                  checked={lamination} 
-                  onChange={(e) => setLamination(e.target.checked)} 
-                />
-                Add Laminating Cover (+ GH₵ 3.00)
-              </label>
-            </div>
+            {/* DYNAMIC FINISHING ADD-ONS */}
+            {(selectedShop?.supports_binding || selectedShop?.supports_lamination) && (
+              <div className={styles.checkboxRow}>
+                {selectedShop?.supports_binding && (
+                  <label className={styles.checkboxLabel}>
+                    <input 
+                      type="checkbox" 
+                      checked={binding} 
+                      onChange={(e) => setBinding(e.target.checked)} 
+                    />
+                    Add Spiral Binding (+ GH₵ 12.00)
+                  </label>
+                )}
+                {selectedShop?.supports_lamination && (
+                  <label className={styles.checkboxLabel}>
+                    <input 
+                      type="checkbox" 
+                      checked={lamination} 
+                      onChange={(e) => setLamination(e.target.checked)} 
+                    />
+                    Add Laminating Cover (+ GH₵ {(paperSize === 'A3' ? selectedShop?.price_lamination_a3 ?? 8.0 : selectedShop?.price_lamination_a4 ?? 5.0).toFixed(2)})
+                  </label>
+                )}
+              </div>
+            )}
 
             <button 
               type="button" 
@@ -533,7 +642,7 @@ export default function GuestOrder() {
             <div className={styles.summaryDetails}>
               <div className={styles.detailRow}>
                 <span>Print Shop:</span>
-                <strong>{selectedShopName || 'Selected Shop'}</strong>
+                <strong>{selectedShop?.shop_name || 'Selected Shop'}</strong>
               </div>
               <div className={styles.detailRow}>
                 <span>Document:</span>
@@ -541,7 +650,7 @@ export default function GuestOrder() {
               </div>
               <div className={styles.detailRow}>
                 <span>Print Options:</span>
-                <strong>{colorOption === 'COLOR' ? 'Color' : 'B&W'}, {copies} copy({copies > 1 ? 'ies' : ''}), {sidedOption === 'DOUBLE' ? '2-Sided' : '1-Sided'}</strong>
+                <strong>{paperSize}, {colorOption === 'COLOR' ? 'Color' : 'B&W'}, {copies} copy({copies > 1 ? 'ies' : ''}), {sidedOption === 'DOUBLE' ? '2-Sided' : '1-Sided'}</strong>
               </div>
               <div className={styles.detailRow}>
                 <span>Guest Contact:</span>
