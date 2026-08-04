@@ -75,12 +75,11 @@ public class OtpService {
         verification.set_verified(true);
         otpRepository.save(verification);
 
-        var userOpt = usersRepository.findByEmail(email);
-        if (userOpt.isPresent()) {
-            Users user = userOpt.get();
-            user.set_verified(true);
-            usersRepository.save(user);
-        }
+        var users = usersRepository.findAllByEmail(email);
+        users.forEach(u -> {
+            u.set_verified(true);
+            usersRepository.save(u);
+        });
 
         return true;
     }

@@ -69,13 +69,6 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
-
         Users.user_role targetRole = Users.user_role.Student;
         if (request.getRole() != null && request.getRole().equalsIgnoreCase("Admin")) {
             targetRole = Users.user_role.Admin;
@@ -83,8 +76,13 @@ public class AuthenticationService {
 
         final Users.user_role finalRole = targetRole;
         Users user = repository.findByEmailAndRole(request.getEmail(), finalRole)
-                .or(() -> repository.findByEmail(request.getEmail()))
+                .or(() -> repository.findAllByEmail(request.getEmail()).stream().filter(u -> u.getRole() == finalRole).findFirst())
+                .or(() -> repository.findAllByEmail(request.getEmail()).stream().findFirst())
                 .orElseThrow(()-> new UsernameNotFoundException("User does not exist with email: " + request.getEmail()));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword_hash())) {
+            throw new org.springframework.security.authentication.BadCredentialsException("Invalid email or password");
+        }
 
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
@@ -94,7 +92,7 @@ public class AuthenticationService {
     }
 
     public void forgotPassword(ForgotPasswordRequest request) {
-        var user = repository.findByEmail(request.getEmail())
+        var user = repository.findAllByEmail(request.getEmail()).stream().findFirst()
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         // Generate 6 digit OTP
