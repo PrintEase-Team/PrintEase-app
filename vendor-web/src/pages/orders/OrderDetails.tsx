@@ -176,7 +176,7 @@ export default function OrderDetails() {
         <div className={styles.middleCol}>
           {order.files && order.files.length > 0 ? (
             order.files.map((file: any, index: number) => {
-              const setting = order.printSettings?.find((s: any) => (s.file_id?.file_id || s.file_id) === file.file_id) || {};
+              const setting = order.printSettings?.find((s: any) => (s.file_id?.file_id || s.file_id) === file.file_id) || (order.printSettings && order.printSettings[index]) || {};
               const fileType = (file.file_type || '').toLowerCase();
               const isFilePdf = fileType.includes('pdf');
               const isFileImg = fileType.includes('image');

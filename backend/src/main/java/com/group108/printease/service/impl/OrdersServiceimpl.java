@@ -11,6 +11,7 @@ import com.group108.printease.repositories.PrintSettingsRepository;
 import com.group108.printease.repositories.PrintShopsRepository;
 import com.group108.printease.repositories.UsersRepository;
 import com.group108.printease.entities.PrintShops;
+import com.group108.printease.entities.Print_Settings;
 import com.group108.printease.service.OrdersService;
 import com.group108.printease.service.NotificationsService;
 import jakarta.persistence.EntityNotFoundException;
@@ -114,10 +115,23 @@ public class OrdersServiceimpl implements OrdersService {
 
         if (request.getFiles() != null && !request.getFiles().isEmpty()) {
             for (var fileDto : request.getFiles()) {
-                filesRepository.findById(fileDto.getFile_id()).ifPresent(f -> {
-                    f.setOrder_id(savedOrder);
-                    filesRepository.save(f);
-                });
+                if (fileDto.getFile_id() != null) {
+                    filesRepository.findById(fileDto.getFile_id()).ifPresent(f -> {
+                        f.setOrder_id(savedOrder);
+                        filesRepository.save(f);
+                    });
+                }
+                
+                Print_Settings settings = new Print_Settings();
+                settings.setOrder_id(savedOrder);
+                settings.setCopies(fileDto.getCopies() != null ? fileDto.getCopies() : 1);
+                settings.setColor_mode(fileDto.getColor_option() != null && fileDto.getColor_option().equalsIgnoreCase("BW") 
+                    ? Print_Settings.color_settings.Black_and_White : Print_Settings.color_settings.Colored);
+                settings.setSide(fileDto.getSided_option() != null && fileDto.getSided_option().equalsIgnoreCase("SINGLE") 
+                    ? Print_Settings.settings_side.Single_sided : Print_Settings.settings_side.Double_sided);
+                settings.setLamination(fileDto.getLamination() != null ? fileDto.getLamination() : false);
+                settings.setBinding(fileDto.getBinding() != null ? fileDto.getBinding() : false);
+                printSettingsRepository.save(settings);
             }
         }
 

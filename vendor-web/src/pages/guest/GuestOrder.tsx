@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Printer, Upload, CheckCircle2, FileText, CreditCard, ShieldCheck, 
   ArrowLeft, ArrowRight, Store, ChevronRight, ChevronDown, ChevronUp, Sliders, User, Phone, Mail, QrCode, 
-  Tag, Bell, Copy, Check, DollarSign, Wallet, Lock, Camera, FolderOpen
+  Tag, Bell, Copy, Check, DollarSign, Wallet, Lock, Camera, FolderOpen, Home, Clock
 } from 'lucide-react';
 import styles from './GuestOrder.module.css';
 import { API_BASE_URL } from '../../config';
@@ -134,7 +134,10 @@ export default function GuestOrder() {
       unitPrice = colorOption === 'COLOR' ? (selectedShop.price_letter_color ?? 1.2) : (selectedShop.price_letter_bw ?? 0.6);
     }
 
-    if (sidedOption === 'DOUBLE') {
+    const isImage = file && file.type.startsWith('image/');
+    const isSinglePage = pagesDetected === 1;
+
+    if (sidedOption === 'DOUBLE' && !isImage && !isSinglePage) {
       unitPrice *= 1.5;
     }
 
@@ -154,7 +157,7 @@ export default function GuestOrder() {
     }
 
     setCalculatedCost(Math.max(total, 0.5));
-  }, [selectedShop, copies, colorOption, sidedOption, paperSize, binding, lamination]);
+  }, [selectedShop, copies, colorOption, sidedOption, paperSize, binding, lamination, file, pagesDetected]);
 
   const toggleSection = (section: string) => {
     setExpandedSection(prev => prev === section ? null : section);
@@ -197,18 +200,7 @@ export default function GuestOrder() {
       if (file) formData.append('file', file);
       
       let fileId = 'demo-file-id';
-      try {
-        const uploadRes = await fetch(`${API_BASE_URL}/api/file/upload`, {
-          method: 'POST',
-          body: formData,
-        });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          fileId = uploadData.file_id || uploadData.id || uploadData.fileId;
-        }
-      } catch (e) {}
-
-      // 2. Submit Guest Express Order
+      // 1. Submit Guest Express Order
       const orderPayload = {
         shop_id: selectedShopId,
         guest_name: guestName,
@@ -216,13 +208,14 @@ export default function GuestOrder() {
         guest_email: guestEmail,
         payment_method: paymentMethod,
         total_amount: calculatedCost,
-        file_id: fileId,
-        copies,
-        color_option: colorOption,
-        sided_option: sidedOption,
-        paper_size: paperSize,
-        binding,
-        lamination,
+        files: [{
+          copies,
+          color_option: colorOption,
+          sided_option: sidedOption,
+          binding,
+          lamination,
+          paper_size: paperSize
+        }]
       };
 
       const orderRes = await fetch(`${API_BASE_URL}/api/orders/guest`, {
@@ -233,8 +226,25 @@ export default function GuestOrder() {
 
       if (orderRes.ok) {
         const orderData = await orderRes.json();
-        setPickupCode(orderData.pickup_code || Math.floor(100000 + Math.random() * 900000).toString());
+        const pCode = orderData.pickup_code || Math.floor(100000 + Math.random() * 900000).toString();
+        setPickupCode(pCode);
         setOrderId(orderData.order_id || 'ORD-EXPRESS');
+
+        // 2. Upload File linked to the newly created Order
+        if (orderData.order_id && orderData.student_id && file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('order_id', orderData.order_id);
+          formData.append('uploaded_by', orderData.student_id);
+          try {
+            await fetch(`${API_BASE_URL}/api/file/upload`, {
+              method: 'POST',
+              body: formData,
+            });
+          } catch (e) {
+            console.error('File upload failed', e);
+          }
+        }
       } else {
         setPickupCode(Math.floor(100000 + Math.random() * 900000).toString());
       }
@@ -279,55 +289,71 @@ export default function GuestOrder() {
   if (orderComplete) {
     return (
       <div className={styles.container}>
-        <div className={styles.successCard}>
-          <div className={styles.successIcon}>
-            <CheckCircle2 size={48} color="#16A34A" />
+        <div className={styles.successCard} style={{ textAlign: 'center', padding: '32px 24px', maxWidth: '440px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#dcfce7', marginBottom: '24px' }}>
+            <CheckCircle2 size={48} color="#16a34a" />
           </div>
-          <h1 className={styles.successTitle}>Express Order Sent!</h1>
-          <p className={styles.successSubtitle}>
-            Your document is ready for printing at <strong>{selectedShop?.shop_name || 'the print shop'}</strong>.
+          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>Order Placed!</h1>
+          <p style={{ fontSize: '15px', color: '#64748b', margin: '0 0 32px 0' }}>
+            Thank you! Your order has been placed successfully.
           </p>
 
-          {/* 6-DIGIT PICKUP CODE BOX */}
-          <div className={styles.codeBox}>
-            <span className={styles.codeLabel}>YOUR 6-DIGIT PICKUP CODE</span>
-            <span className={styles.codeValue}>{pickupCode}</span>
-            <span className={styles.codeNote}>Show this code to the vendor at pickup</span>
+          <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', textAlign: 'left', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+            <div style={{ backgroundColor: '#eff6ff', padding: '12px', borderRadius: '8px' }}>
+              <FileText size={24} color="#3b82f6" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Pickup Code</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#0052FF', letterSpacing: '2px' }}>{pickupCode}</div>
+            </div>
+            <button type="button" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: '1px solid #e2e8f0', padding: '6px 12px', borderRadius: '6px', color: '#0052FF', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              <FileText size={14} /> Receipt
+            </button>
           </div>
 
-          {/* SCAN-ABLE QR CODE */}
-          <div style={{ margin: '16px 0', background: '#FFFFFF', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.04)', textAlign: 'center' }}>
-            <img 
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${pickupCode}`} 
-              alt="Pickup Code QR" 
-              style={{ width: '180px', height: '180px', borderRadius: '8px' }}
-            />
-            <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, display: 'block', marginTop: '8px' }}>
-              Pickup QR Code
-            </span>
-          </div>
-
-          <div className={styles.summaryDetails}>
-            <div className={styles.detailRow}>
-              <span>Document:</span>
-              <strong>{file?.name}</strong>
+          <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', textAlign: 'left', marginBottom: '32px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+            <div style={{ backgroundColor: '#eff6ff', padding: '12px', borderRadius: '8px' }}>
+              <Clock size={24} color="#3b82f6" />
             </div>
-            <div className={styles.detailRow}>
-              <span>Guest Name:</span>
-              <strong>{guestName}</strong>
-            </div>
-            <div className={styles.detailRow}>
-              <span>Payment Mode:</span>
-              <strong>{paymentMethod === 'PAYSTACK' ? 'Paystack Online' : 'Pay Cash at Counter'}</strong>
-            </div>
-            <div className={styles.detailRow}>
-              <span>Est. Total:</span>
-              <strong className={styles.priceText}>GH₵ {calculatedCost.toFixed(2)}</strong>
+            <div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Estimated Ready Time</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#0052FF', marginBottom: '4px' }}>Today, 30 Mins</div>
+              <div style={{ fontSize: '13px', color: '#64748b' }}>Show the pickup code to the vendor to collect.</div>
             </div>
           </div>
 
-          <button className={styles.primaryButton} onClick={() => { setOrderComplete(false); setCurrentStep(1); setFile(null); }}>
-            Place Another Express Order
+          <div style={{ textAlign: 'left', marginBottom: '32px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: '0 0 16px 0' }}>Order Summary</h3>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+                <span style={{ color: '#64748b', fontSize: '14px' }}>Print Shop</span>
+                <span style={{ color: '#0f172a', fontSize: '14px', fontWeight: 500 }}>{selectedShop?.shop_name || 'Selected Shop'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+                <span style={{ color: '#64748b', fontSize: '14px' }}>Document</span>
+                <span style={{ color: '#0f172a', fontSize: '14px', fontWeight: 500 }}>{file?.name}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+                <span style={{ color: '#64748b', fontSize: '14px' }}>Print Options</span>
+                <span style={{ color: '#0f172a', fontSize: '14px', fontWeight: 500, textAlign: 'right' }}>{paperSize}, {colorOption === 'COLOR' ? 'Color' : 'B&W'}, {copies} copy{copies > 1 ? 's' : ''}, {sidedOption === 'DOUBLE' ? 'Double-sided' : 'Single-sided'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+                <span style={{ color: '#64748b', fontSize: '14px' }}>Pages</span>
+                <span style={{ color: '#0f172a', fontSize: '14px', fontWeight: 500 }}>{pagesDetected} page{pagesDetected > 1 ? 's' : ''}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700 }}>Total Amount</span>
+                <span style={{ color: '#0052FF', fontSize: '16px', fontWeight: 700 }}>GH₵{calculatedCost.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            style={{ width: '100%', padding: '16px', backgroundColor: '#0052FF', color: '#ffffff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+            onClick={() => { setOrderComplete(false); setCurrentStep(1); setFile(null); }}
+          >
+            <Home size={20} /> Back to Home
           </button>
         </div>
       </div>
