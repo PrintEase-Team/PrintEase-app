@@ -160,6 +160,13 @@ export default function HomeScreen() {
         const name = userRes.data.full_name || userRes.data.name;
         if (name) setUserName(name.split(' ')[0]);
         if (userRes.data.default_shop_id !== undefined) setDefaultShopId(userRes.data.default_shop_id);
+        if (userRes.data.default_location_name && !isUsingLiveLocation) {
+          useAuthStore.getState().setDefaultLocation(
+            userRes.data.default_location_name,
+            userRes.data.default_latitude,
+            userRes.data.default_longitude
+          );
+        }
       }
 
       const notifRes = await api.get(`/notifications/user/${user_id}`);
