@@ -373,10 +373,27 @@ export default function GuestOrder() {
                   )}
 
                   {selectedShop.supports_binding && (
-                    <div className={styles.priceTagItem}>
-                      <span>Spiral Binding</span>
-                      <strong>GH₵ 12.00</strong>
-                    </div>
+                    <>
+                      {(() => {
+                        try {
+                          const tiers = selectedShop.binding_pricing ? JSON.parse(selectedShop.binding_pricing) : null;
+                          if (Array.isArray(tiers) && tiers.length > 0) {
+                            return tiers.map((t: any, idx: number) => (
+                              <div key={idx} className={styles.priceTagItem}>
+                                <span>Comb Binding ({t.min}-{t.max} pgs)</span>
+                                <strong>GH₵ {(Number(t.price) || 12.00).toFixed(2)}</strong>
+                              </div>
+                            ));
+                          }
+                        } catch (e) {}
+                        return (
+                          <div className={styles.priceTagItem}>
+                            <span>Comb Binding (1-100 pgs)</span>
+                            <strong>GH₵ 12.00</strong>
+                          </div>
+                        );
+                      })()}
+                    </>
                   )}
 
                   {selectedShop.supports_lamination && (
@@ -573,7 +590,13 @@ export default function GuestOrder() {
                       checked={binding} 
                       onChange={(e) => setBinding(e.target.checked)} 
                     />
-                    Add Spiral Binding (+ GH₵ 12.00)
+                    Add Comb Binding (+ GH₵ {(() => {
+                      try {
+                        const t = selectedShop?.binding_pricing ? JSON.parse(selectedShop.binding_pricing) : null;
+                        if (Array.isArray(t) && t[0]?.price) return Number(t[0].price).toFixed(2);
+                      } catch (e) {}
+                      return '12.00';
+                    })()})
                   </label>
                 )}
                 {selectedShop?.supports_lamination && (
