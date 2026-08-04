@@ -248,7 +248,7 @@ export default function DashboardLayout() {
             </div>
             <div className={styles.userInfo}>
               <span className={styles.userName}>{vendorName}</span>
-              <span className={styles.userRole}>PrintEase Shop</span>
+              <span className={styles.userRole}>{shopData?.shop_name || 'PrintEase Shop'}</span>
             </div>
           </div>
         </div>
