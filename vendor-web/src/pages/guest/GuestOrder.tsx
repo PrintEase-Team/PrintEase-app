@@ -20,6 +20,7 @@ interface PrintShop {
   supports_a3?: boolean;
   supports_letter?: boolean;
   supports_binding?: boolean;
+  binding_pricing?: string;
   supports_lamination?: boolean;
   price_lamination_a4?: number;
   price_lamination_a3?: number;
