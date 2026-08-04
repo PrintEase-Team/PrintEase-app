@@ -15,6 +15,7 @@ public class AuthenticationController {
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @org.springframework.web.bind.annotation.GetMapping("/schema/fix")
+    @PostMapping("/schema/fix")
     public ResponseEntity<String> fixSchema() {
         try {
             jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk8usegh22yymqae5jjt4pdbd3k CASCADE");
