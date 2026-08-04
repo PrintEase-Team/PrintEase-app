@@ -108,12 +108,10 @@ public class UsersServiceimpl implements UsersService {
 
     @Override
     public void deleteUsers(UUID userId) {
-      Users users= usersRepository.findById(userId)
+        Users users = usersRepository.findById(userId)
                 .orElseThrow(
-                        ()->new ResourceNotFoundException("No user exist with user id "+ userId)
+                        () -> new ResourceNotFoundException("No user exist with user id " + userId)
                 );
-        users.set_active(false);
-        usersRepository.save(users);
-
+        usersRepository.delete(users);
     }
 }
