@@ -213,11 +213,6 @@ export default function GuestOrder() {
   const processOrderSubmission = async () => {
     setIsSubmitting(true);
     try {
-      // 1. Upload File
-      const formData = new FormData();
-      if (file) formData.append('file', file);
-      
-      let fileId = 'demo-file-id';
       // 1. Submit Guest Express Order
       const orderPayload = {
         shop_id: selectedShopId,
@@ -256,7 +251,7 @@ export default function GuestOrder() {
           formData.append('order_id', orderData.order_id);
           formData.append('uploaded_by', orderData.student_id);
           try {
-            await fetch(`${API_BASE_URL}/api/file/upload`, {
+            await fetch(`${API_BASE_URL}/api/file`, {
               method: 'POST',
               body: formData,
             });

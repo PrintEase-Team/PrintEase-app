@@ -131,6 +131,8 @@ public class OrdersServiceimpl implements OrdersService {
                     ? Print_Settings.settings_side.Single_sided : Print_Settings.settings_side.Double_sided);
                 settings.setRequires_lamination(fileDto.getLamination() != null ? fileDto.getLamination() : false);
                 settings.setRequires_binding(fileDto.getBinding() != null ? fileDto.getBinding() : false);
+                settings.setPaper_size(fileDto.getPaper_size() != null ? fileDto.getPaper_size() : "A4");
+                settings.setPage_range(fileDto.getPage_range());
                 printSettingsRepository.save(settings);
             }
         }

@@ -36,6 +36,8 @@ public class OrdersController {
         private String sided_option;
         private Boolean binding;
         private Boolean lamination;
+        private String paper_size;
+        private String page_range;
     }
 
     @lombok.Data
