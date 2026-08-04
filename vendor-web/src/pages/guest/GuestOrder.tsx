@@ -178,9 +178,10 @@ export default function GuestOrder() {
       // Page Detection
       if (selected.type === 'application/pdf') {
         try {
-          const arrayBuffer = await selected.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const fileUrl = URL.createObjectURL(selected);
+          const pdf = await pdfjsLib.getDocument(fileUrl).promise;
           setPagesDetected(pdf.numPages);
+          URL.revokeObjectURL(fileUrl);
         } catch (error) {
           console.error("Error reading PDF pages:", error);
           setPagesDetected(1); // fallback
@@ -561,7 +562,7 @@ export default function GuestOrder() {
               <label className={styles.uploadFileBtn}>
                 <input 
                   type="file" 
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
+                  accept=".pdf,.png,.jpg,.jpeg" 
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />
