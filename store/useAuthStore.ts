@@ -45,11 +45,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await authService.login(credentials);
+      const uid = response.userId || response.user_id || '';
       await AsyncStorage.setItem('token', response.token);
-      await AsyncStorage.setItem('user_id', response.user_id);
+      await AsyncStorage.setItem('user_id', uid);
       
       try {
-        const userRes = await api.get(`/users/${response.user_id}`);
+        const userRes = await api.get(`/users/${uid}`);
         const userData = userRes.data;
         
         if (userData.default_location_name) {
@@ -59,7 +60,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           
           set({ 
             token: response.token, 
-            user_id: response.user_id,
+            user_id: uid,
             defaultLocationName: userData.default_location_name,
             defaultLatitude: userData.default_latitude,
             defaultLongitude: userData.default_longitude,
@@ -71,7 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log("Could not fetch user profile on login", err);
       }
       
-      set({ token: response.token, user_id: response.user_id, isLoading: false });
+      set({ token: response.token, user_id: uid, isLoading: false });
     } catch (error: any) {
       set({ 
         error: error.response?.data?.message || 'Login failed. Please check your credentials.',

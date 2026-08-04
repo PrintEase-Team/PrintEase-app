@@ -13,4 +13,9 @@ public class AuthenticationResponse {
     private String token;
     private java.util.UUID userId;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("user_id")
+    public java.util.UUID getUser_id() {
+        return userId;
+    }
+
 }

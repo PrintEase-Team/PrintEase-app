@@ -17,7 +17,8 @@ export interface RegisterDetails {
 
 export interface AuthResponse {
   token: string;
-  user_id: string;
+  userId?: string;
+  user_id?: string;
 }
 
 export const authService = {
