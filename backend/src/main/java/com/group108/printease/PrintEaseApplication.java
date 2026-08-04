@@ -4,15 +4,26 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.jdbc.core.JdbcTemplate;
+
 @SpringBootApplication
 @EnableScheduling
 public class PrintEaseApplication {
     public static void main(String[] args) {
-/*
-token:"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJpZ25hdGl1c0BnbWFpbC5jb20iLCJpYXQiOjE3ODM0NDY1OTYsImV4cCI6MTc4MzUzMjk5Nn0.vG3vVeihpR0zQcTpXA4UrxSU4YlpvkGWWT793KXeou4"
-*/
         SpringApplication.run(PrintEaseApplication.class, args);
+    }
 
-
+    @Bean
+    public CommandLineRunner dropOldEmailConstraint(JdbcTemplate jdbcTemplate) {
+        return args -> {
+            try {
+                jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk8usegh22yymqae5jjt4pdb3k");
+                jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS users_tbl_email_key");
+            } catch (Exception e) {
+                System.out.println("Notice: Could not drop legacy email constraint: " + e.getMessage());
+            }
+        };
     }
 }
