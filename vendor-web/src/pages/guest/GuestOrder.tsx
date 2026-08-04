@@ -371,6 +371,28 @@ export default function GuestOrder() {
                       </div>
                     </>
                   )}
+
+                  {selectedShop.supports_binding && (
+                    <div className={styles.priceTagItem}>
+                      <span>Spiral Binding</span>
+                      <strong>GH₵ 12.00</strong>
+                    </div>
+                  )}
+
+                  {selectedShop.supports_lamination && (
+                    <>
+                      <div className={styles.priceTagItem}>
+                        <span>Lamination A4</span>
+                        <strong>GH₵ {(selectedShop.price_lamination_a4 ?? 5.00).toFixed(2)}</strong>
+                      </div>
+                      {selectedShop.supports_a3 && (
+                        <div className={styles.priceTagItem}>
+                          <span>Lamination A3</span>
+                          <strong>GH₵ {(selectedShop.price_lamination_a3 ?? 8.00).toFixed(2)}</strong>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 {/* SERVICES OFFERED BADGES */}
