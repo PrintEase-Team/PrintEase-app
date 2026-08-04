@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import styles from './GuestOrder.module.css';
 import { API_BASE_URL } from '../../config';
+import * as pdfjsLib from 'pdfjs-dist';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface PrintShop {
   shop_id: string;
@@ -42,6 +44,7 @@ export default function GuestOrder() {
   const [selectedShop, setSelectedShop] = useState<PrintShop | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
+  const [pagesDetected, setPagesDetected] = useState(1);
   const [copies, setCopies] = useState(1);
   const [colorOption, setColorOption] = useState<'BW' | 'COLOR'>('COLOR');
   const [sidedOption, setSidedOption] = useState<'SINGLE' | 'DOUBLE'>('SINGLE');
@@ -134,7 +137,7 @@ export default function GuestOrder() {
       unitPrice *= 1.5;
     }
 
-    let total = unitPrice * copies * 1; // Default 1 page base per file
+    let total = unitPrice * copies * pagesDetected;
 
     if (binding && selectedShop.supports_binding) {
       const tiers = getBindingTiers(selectedShop.binding_pricing);
@@ -152,9 +155,32 @@ export default function GuestOrder() {
     setCalculatedCost(Math.max(total, 0.5));
   }, [selectedShop, copies, colorOption, sidedOption, paperSize, binding, lamination]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selected = e.target.files[0];
+      const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      
+      if (!validTypes.includes(selected.type)) {
+        alert("Invalid file format. Only PDF, PNG, and JPG are accepted.");
+        return;
+      }
+      
+      setFile(selected);
+      
+      // Page Detection
+      if (selected.type === 'application/pdf') {
+        try {
+          const arrayBuffer = await selected.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          setPagesDetected(pdf.numPages);
+        } catch (error) {
+          console.error("Error reading PDF pages:", error);
+          setPagesDetected(1); // fallback
+        }
+      } else {
+        // Images are always 1 page
+        setPagesDetected(1);
+      }
     }
   };
 
@@ -225,7 +251,7 @@ export default function GuestOrder() {
 
     if (paymentMethod === 'PAYSTACK' && (window as any).PaystackPop) {
       const handler = (window as any).PaystackPop.setup({
-        key: 'pk_test_dummy_key', // Paystack public key
+        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_dummy_key', // Paystack public key
         email: guestEmail || `${guestPhone}@printease.com`,
         amount: Math.round(calculatedCost * 100), // Amount in Pesewas
         currency: 'GHS',
@@ -353,7 +379,12 @@ export default function GuestOrder() {
         {/* STEP 1: WELCOME SPLASH & OFFICIAL RATE CARD TABLE */}
         {currentStep === 1 && (
           <div className={styles.splashCard}>
-            <Printer size={120} color="#0052FF" className={styles.splashHeroIcon} />
+            <img 
+              src="/printer-illustration.png" 
+              alt="Express Print" 
+              className={styles.splashHeroIcon} 
+              style={{ objectFit: 'contain' }}
+            />
             <h2 className={styles.splashTitle}>Welcome to Express Print</h2>
             <p className={styles.splashDescription}>
               Upload files from your phone and collect your prints at the counter in minutes.
@@ -516,25 +547,6 @@ export default function GuestOrder() {
               </div>
             )}
 
-            <div className={styles.uploadGrid}>
-              <button type="button" className={styles.uploadGridBtn} onClick={() => alert("Google Drive integration coming soon.")}>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" style={{ width: 24, height: 24 }} />
-                Google Drive
-              </button>
-              <button type="button" className={styles.uploadGridBtn} onClick={() => alert("Dropbox integration coming soon.")}>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/c/cb/Dropbox_logo_2017.svg" alt="Dropbox" style={{ width: 24, height: 24 }} />
-                Dropbox
-              </button>
-              <button type="button" className={styles.uploadGridBtn} onClick={() => alert("Camera API integration coming soon.")}>
-                <Camera size={24} color="#64748B" />
-                Take Photo
-              </button>
-              <button type="button" className={styles.uploadGridBtn} onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}>
-                <FolderOpen size={24} color="#64748B" />
-                Browse Files
-              </button>
-            </div>
-
             <div className={styles.infoBlock}>
               <ShieldCheck size={24} color="#0052FF" style={{ flexShrink: 0 }} />
               <div>
@@ -593,10 +605,10 @@ export default function GuestOrder() {
 
             <div className={styles.settingsSection}>
               <div className={styles.settingsLabel} style={{ marginBottom: '4px' }}>Pages</div>
-              <span style={{ fontSize: '12px', color: '#16A34A', display: 'block', marginBottom: '12px' }}>1 pages detected</span>
+              <span style={{ fontSize: '12px', color: '#16A34A', display: 'block', marginBottom: '12px' }}>{pagesDetected} pages detected</span>
               <div className={styles.pagesCardActive}>
                 <div className={styles.optionCardRadioActive} />
-                <span className={styles.pagesCardTitle}>All Pages (1 page)</span>
+                <span className={styles.pagesCardTitle}>All Pages ({pagesDetected} page{pagesDetected > 1 ? 's' : ''})</span>
               </div>
             </div>
 
@@ -679,7 +691,7 @@ export default function GuestOrder() {
               <div className={styles.footerTotalBox}>
                 <span className={styles.footerTotalLabel}>Estimated Total</span>
                 <span className={styles.footerTotalValue}>GH₵{calculatedCost.toFixed(2)}</span>
-                <span className={styles.footerTotalDetails}>1 pages • {copies} copies</span>
+                <span className={styles.footerTotalDetails}>{pagesDetected} page{pagesDetected > 1 ? 's' : ''} • {copies} copies</span>
               </div>
               <button 
                 type="button" 
@@ -773,7 +785,7 @@ export default function GuestOrder() {
               </div>
               <div className={styles.summaryRow}>
                 <span className={styles.summaryRowLabel}>Pages</span>
-                <span className={styles.summaryRowValue}>1 page</span>
+                <span className={styles.summaryRowValue}>{pagesDetected} page{pagesDetected > 1 ? 's' : ''}</span>
               </div>
               <div className={styles.summaryRow}>
                 <span className={styles.summaryRowLabel}>Guest Contact</span>
