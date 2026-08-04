@@ -49,10 +49,10 @@ export default function GuestOrder() {
   const [pagesDetected, setPagesDetected] = useState(1);
   const [copies, setCopies] = useState(1);
   const [colorOption, setColorOption] = useState<'BW' | 'COLOR'>('COLOR');
-  const [sidedOption, setSidedOption] = useState<'SINGLE' | 'DOUBLE'>('SINGLE');
+  const [sidedOption, setSidedOption] = useState<'SINGLE' | 'DOUBLE'>('DOUBLE');
   const [paperSize, setPaperSize] = useState<'A4' | 'A3' | 'LETTER'>('A4');
   const [binding, setBinding] = useState(false);
-  const [lamination, setLamination] = useState(true);
+  const [lamination, setLamination] = useState(false);
 
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -137,40 +137,41 @@ export default function GuestOrder() {
     return count > 0 ? count : pagesDetected;
   };
 
-  // Cost Calculator
+  // Cost Calculator (matches mobile app logic)
   useEffect(() => {
     if (!selectedShop) return;
     
     const pagesToPrint = getPagesToPrint();
-    const isImage = file && file.type.startsWith('image/');
-    const isSinglePage = pagesToPrint === 1;
+    const sheetsUsed = sidedOption === 'DOUBLE' ? Math.ceil(pagesToPrint / 2) : pagesToPrint;
 
-    let unitPrice = 0.5;
+    let baseRate = 0.5;
     if (paperSize === 'A4') {
-      unitPrice = colorOption === 'COLOR' ? (selectedShop.price_a4_color ?? 1.0) : (selectedShop.price_a4_bw ?? 0.5);
+      baseRate = colorOption === 'COLOR' ? (selectedShop.price_a4_color ?? 1.0) : (selectedShop.price_a4_bw ?? 0.5);
     } else if (paperSize === 'A3') {
-      unitPrice = colorOption === 'COLOR' ? (selectedShop.price_a3_color ?? 1.5) : (selectedShop.price_a3_bw ?? 0.8);
+      baseRate = colorOption === 'COLOR' ? (selectedShop.price_a3_color ?? 1.5) : (selectedShop.price_a3_bw ?? 0.8);
     } else if (paperSize === 'LETTER') {
-      unitPrice = colorOption === 'COLOR' ? (selectedShop.price_letter_color ?? 1.2) : (selectedShop.price_letter_bw ?? 0.6);
+      baseRate = colorOption === 'COLOR' ? (selectedShop.price_letter_color ?? 1.2) : (selectedShop.price_letter_bw ?? 0.6);
     }
 
-    if (sidedOption === 'DOUBLE' && !isImage && !isSinglePage) {
-      unitPrice *= 1.5;
-    }
-
-    let total = unitPrice * copies * pagesToPrint;
+    let total = sheetsUsed * baseRate * copies;
 
     if (binding && selectedShop.supports_binding) {
       const tiers = getBindingTiers(selectedShop.binding_pricing);
-      const bindingPrice = Number(tiers[0]?.price) || 10.00;
-      total += bindingPrice;
+      const totalSheetsPrinted = pagesToPrint * copies;
+      const matchingTier = tiers.find((t: any) => totalSheetsPrinted >= t.min && totalSheetsPrinted <= t.max);
+      if (matchingTier) {
+        total += Number(matchingTier.price);
+      } else if (tiers.length > 0) {
+        const highestTier = tiers.reduce((prev: any, current: any) => (prev.max > current.max) ? prev : current);
+        total += Number(highestTier.price);
+      }
     }
 
     if (lamination && selectedShop.supports_lamination) {
       const lamPrice = paperSize === 'A3' 
         ? (selectedShop.price_lamination_a3 ?? 8.0) 
         : (selectedShop.price_lamination_a4 ?? 5.0);
-      total += lamPrice;
+      total += lamPrice * sheetsUsed * copies;
     }
 
     setCalculatedCost(Math.max(total, 0.5));
@@ -724,6 +725,26 @@ export default function GuestOrder() {
                 <span className={styles.slider}></span>
               </label>
             </div>
+            {sidedOption === 'DOUBLE' && getPagesToPrint() > 1 && (() => {
+              const pagesToPrint = getPagesToPrint();
+              const sheetsUsed = Math.ceil(pagesToPrint / 2);
+              const savedSheets = pagesToPrint - sheetsUsed;
+              let baseRate = 0.5;
+              if (selectedShop) {
+                if (paperSize === 'A4') baseRate = colorOption === 'COLOR' ? (selectedShop.price_a4_color ?? 1.0) : (selectedShop.price_a4_bw ?? 0.5);
+                else if (paperSize === 'A3') baseRate = colorOption === 'COLOR' ? (selectedShop.price_a3_color ?? 1.5) : (selectedShop.price_a3_bw ?? 0.8);
+                else if (paperSize === 'LETTER') baseRate = colorOption === 'COLOR' ? (selectedShop.price_letter_color ?? 1.2) : (selectedShop.price_letter_bw ?? 0.6);
+              }
+              const savedAmount = savedSheets * baseRate * copies;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0', marginTop: '-4px', marginBottom: '8px' }}>
+                  <CheckCircle2 size={16} color="#16a34a" />
+                  <span style={{ fontSize: '13px', color: '#15803d', fontWeight: 500 }}>
+                    You saved {savedSheets} sheet{savedSheets > 1 ? 's' : ''} (GH₵{savedAmount.toFixed(2)}) by choosing double-sided
+                  </span>
+                </div>
+              );
+            })()}
 
             {selectedShop?.supports_lamination && (
               <div className={styles.toggleRow}>
@@ -755,7 +776,7 @@ export default function GuestOrder() {
               <div className={styles.footerTotalBox}>
                 <span className={styles.footerTotalLabel}>Estimated Total</span>
                 <span className={styles.footerTotalValue}>GH₵{calculatedCost.toFixed(2)}</span>
-                <span className={styles.footerTotalDetails}>{pagesDetected} page{pagesDetected > 1 ? 's' : ''} • {copies} copies</span>
+                <span className={styles.footerTotalDetails}>{getPagesToPrint()} page{getPagesToPrint() > 1 ? 's' : ''} • {sidedOption === 'DOUBLE' ? Math.ceil(getPagesToPrint() / 2) : getPagesToPrint()} sheet{(sidedOption === 'DOUBLE' ? Math.ceil(getPagesToPrint() / 2) : getPagesToPrint()) > 1 ? 's' : ''} • {copies} cop{copies > 1 ? 'ies' : 'y'}</span>
               </div>
               <button 
                 type="button" 
