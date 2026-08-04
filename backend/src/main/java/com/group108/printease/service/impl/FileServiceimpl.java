@@ -31,6 +31,7 @@ public class FileServiceimpl implements FileService {
     private final OrdersRepository ordersRepository;
     private final UsersRepository usersRepository;
     private final PrintSettingsRepository printSettingsRepository;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Override
     public FileDto uploadFile(UUID orderId, UUID uploadedBy, org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
@@ -79,6 +80,10 @@ public class FileServiceimpl implements FileService {
                 s.setFile_id(savedFile);
                 printSettingsRepository.save(s);
             }
+        }
+
+        if (order.getShop() != null) {
+            messagingTemplate.convertAndSend("/topic/shop/" + order.getShop().getShop_id(), "FILE_UPLOADED");
         }
 
         return Filesmapper.mapToFileDto(savedFile);

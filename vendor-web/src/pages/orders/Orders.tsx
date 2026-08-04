@@ -86,10 +86,11 @@ export default function Orders() {
           price: o.payment_amount != null ? `GHS ${Number(o.payment_amount).toFixed(2)}` : 'GHS --',
           status: o.status === 'Collected' ? 'Completed' : (o.status || 'Pending'),
           date: o.submitted_at ? new Date(o.submitted_at).toLocaleDateString() : 'N/A',
-          time: o.submitted_at ? new Date(o.submitted_at).toLocaleTimeString() : 'N/A'
+          time: o.submitted_at ? new Date(o.submitted_at).toLocaleTimeString() : 'N/A',
+          timestamp: o.submitted_at ? new Date(o.submitted_at).getTime() : 0
         }));
-        // Sort by submitted_at descending
-        mappedOrders.sort((a: any, b: any) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+        // Sort by timestamp descending
+        mappedOrders.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
         setOrders(mappedOrders);
       })
       .catch(err => console.error('Error fetching orders:', err));

@@ -551,17 +551,38 @@ export default function GuestOrder() {
               </div>
             )}
 
-            <button 
-              type="button"
-              className={styles.primaryButton}
-              style={{ marginTop: '24px' }}
-              onClick={() => setCurrentStep(2)}
-            >
-              Start Express Order <ArrowRight size={20} />
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '13px', marginTop: '16px' }}>
-              <ShieldCheck size={16} /> Secure. Fast. Convenient.
-            </div>
+            {selectedShop && selectedShop.is_active === false ? (
+              <div style={{ 
+                width: '100%', 
+                backgroundColor: '#FEF2F2', 
+                border: '1px solid #FCA5A5', 
+                borderRadius: '12px', 
+                padding: '20px', 
+                marginTop: '24px', 
+                textAlign: 'center',
+                boxSizing: 'border-box'
+              }}>
+                <Clock size={36} color="#DC2626" style={{ marginBottom: '8px' }} />
+                <h3 style={{ color: '#991B1B', margin: '0 0 4px 0', fontSize: '18px', fontWeight: 700 }}>Shop is Currently Closed</h3>
+                <p style={{ color: '#7F1D1D', margin: 0, fontSize: '14px', lineHeight: 1.5 }}>
+                  This print shop is currently not accepting new orders. Please select another shop from the dropdown or check back during operating hours.
+                </p>
+              </div>
+            ) : (
+              <>
+                <button 
+                  type="button"
+                  className={styles.primaryButton}
+                  style={{ marginTop: '24px' }}
+                  onClick={() => setCurrentStep(2)}
+                >
+                  Start Express Order <ArrowRight size={20} />
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '13px', marginTop: '16px' }}>
+                  <ShieldCheck size={16} /> Secure. Fast. Convenient.
+                </div>
+              </>
+            )}
           </div>
         )}
 
