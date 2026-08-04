@@ -27,14 +27,15 @@ public class AuthenticationService {
 
 
     public AuthenticationResponse register(RegisterRequest request) {
-        if (repository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email address is already registered. Please sign in or use another email.");
-        }
-
         Users.user_role userRole = Users.user_role.Student;
         if (request.getRole() != null && request.getRole().equalsIgnoreCase("Admin")) {
             userRole = Users.user_role.Admin;
         }
+
+        if (repository.existsByEmailAndRole(request.getEmail(), userRole)) {
+            throw new IllegalArgumentException("An account with email " + request.getEmail() + " is already registered as a " + userRole + ". Please sign in.");
+        }
+
         var user = Users.builder()
                 .full_name(request.getFullname())
                 .email(request.getEmail())
@@ -77,8 +78,21 @@ public class AuthenticationService {
                         request.getPassword()
                 )
         );
-        var user = repository.findByEmail(request.getEmail())
-                .orElseThrow(()-> new UsernameNotFoundException("User does not exist with email :"+ request.getEmail()));
+
+        Users.user_role targetRole = Users.user_role.Student;
+        if (request.getRole() != null && request.getRole().equalsIgnoreCase("Admin")) {
+            targetRole = Users.user_role.Admin;
+        }
+
+        final Users.user_role finalRole = targetRole;
+        Users user = repository.findByEmailAndRole(request.getEmail(), finalRole)
+                .or(() -> repository.findByEmail(request.getEmail()))
+                .orElseThrow(()-> new UsernameNotFoundException("User does not exist with email: " + request.getEmail()));
+
+        if (!user.is_verified()) {
+            throw new IllegalArgumentException("Email not verified. Please verify your OTP code first.");
+        }
+
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
                 .token(jwtToken)

@@ -21,7 +21,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Builder
-@Table(name = "users_tbl")
+@Table(name = "users_tbl", uniqueConstraints = {@UniqueConstraint(columnNames = {"email", "role"})})
 
 public class Users implements UserDetails {
     @Override
@@ -69,7 +69,7 @@ public class Users implements UserDetails {
     private UUID userId;
     @Column(name = "full_name", nullable = false)
     private String full_name;
-    @Column(name = "email", nullable = false,unique = true)
+    @Column(name = "email", nullable = false)
     private String email;
     @Column(name = "password_hash", nullable = false)
     private String password_hash;

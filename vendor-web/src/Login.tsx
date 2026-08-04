@@ -32,18 +32,28 @@ export default function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role: 'Admin' }),
       });
 
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('vendor_token', data.token);
         localStorage.setItem('vendor_id', data.userId || data.user_id);
-        // Assuming vendor roles will be handled by the backend
         navigate('/dashboard');
       } else {
-        const errorData = await response.text();
-        setError('Invalid credentials. Please try again.');
+        const errorText = await response.text();
+        let errorMsg = 'Invalid credentials. Please try again.';
+        try {
+          const errObj = JSON.parse(errorText);
+          if (errObj.message) errorMsg = errObj.message;
+        } catch (e) {}
+
+        if (errorMsg.toLowerCase().includes('verify') || errorMsg.toLowerCase().includes('otp')) {
+          navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
+          return;
+        }
+
+        setError(errorMsg);
       }
     } catch (err) {
       console.error('Login failed:', err);

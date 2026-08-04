@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Store, Clock, Shield, Bell, Check, AlertTriangle, Phone, Mail, MapPin, CheckCircle2, Search, Navigation, ChevronDown } from 'lucide-react';
+import { User, Store, Clock, Shield, Bell, Check, AlertTriangle, Phone, Mail, MapPin, CheckCircle2, Search, Navigation, ChevronDown, QrCode } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import styles from './Settings.module.css';
 import { jwtDecode } from 'jwt-decode';
@@ -474,6 +474,84 @@ export default function Settings() {
               <div className={styles.cardHeader}>
                 <h4 className={styles.cardTitle}>Public Information</h4>
                 <p className={styles.cardDescription}>Students will see these details when placing an order.</p>
+              </div>
+
+              {/* COUNTER QR CODE FLYER CARD */}
+              <div className={styles.card} style={{ marginBottom: '24px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                <div className={styles.cardHeader}>
+                  <h4 className={styles.cardTitle} style={{ color: '#0066FF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <QrCode size={20} /> Shop Counter Express QR Code
+                  </h4>
+                  <p className={styles.cardDescription}>
+                    Print this QR Code and place it on your physical shop counter for walk-in students and guest users to scan & order instantly.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '24px', paddingTop: '16px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center', border: '1px solid #E2E8F0' }}>
+                    {shopId ? (
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`${window.location.origin}/guest-order?shopId=${shopId}`)}`}
+                        alt="Shop Counter QR Code"
+                        style={{ width: '180px', height: '180px', display: 'block' }}
+                      />
+                    ) : (
+                      <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>Loading QR...</div>
+                    )}
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', marginTop: '8px', display: 'block' }}>
+                      {shopName || 'PrintEase Shop'}
+                    </span>
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: '220px' }}>
+                    <h5 style={{ fontSize: '15px', fontWeight: 600, color: '#1E293B', marginBottom: '8px' }}>Express Counter Order URL</h5>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={shopId ? `${window.location.origin}/guest-order?shopId=${shopId}` : 'Loading...'}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '13px', color: '#475569', marginBottom: '16px' }}
+                    />
+                    <button 
+                      type="button"
+                      className={styles.btnPrimary}
+                      onClick={() => {
+                        if (!shopId) return;
+                        const printWindow = window.open('', '_blank');
+                        if (printWindow) {
+                          printWindow.document.write(`
+                            <html>
+                              <head>
+                                <title>Print counter flyer - ${shopName}</title>
+                                <style>
+                                  body { font-family: 'Inter', sans-serif; text-align: center; padding: 40px; }
+                                  .card { border: 4px solid #0066FF; border-radius: 24px; padding: 40px; max-width: 450px; margin: 0 auto; }
+                                  h1 { color: #0066FF; margin-bottom: 4px; font-size: 32px; }
+                                  h2 { color: #1E293B; margin-top: 0; font-size: 22px; }
+                                  p { color: #64748B; font-size: 16px; margin-bottom: 24px; }
+                                  img { width: 240px; height: 240px; border-radius: 12px; }
+                                  .footer { margin-top: 24px; font-size: 14px; color: #94A3B8; font-weight: bold; }
+                                </style>
+                              </head>
+                              <body>
+                                <div class="card">
+                                  <h1>PrintEase Express</h1>
+                                  <h2>${shopName || 'Print Shop'}</h2>
+                                  <p>Scan this QR Code to place an express print order directly from your phone!</p>
+                                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(`${window.location.origin}/guest-order?shopId=${shopId}`)}" />
+                                  <div class="footer">Powered by PrintEase • No App Required</div>
+                                </div>
+                                <script>window.onload = function() { window.print(); }</script>
+                              </body>
+                            </html>
+                          `);
+                          printWindow.document.close();
+                        }
+                      }}
+                    >
+                      Download & Print Counter Poster
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className={styles.inputGrid}>
