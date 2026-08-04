@@ -8,7 +8,8 @@ import {
 import styles from './GuestOrder.module.css';
 import { API_BASE_URL } from '../../config';
 import * as pdfjsLib from 'pdfjs-dist';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface PrintShop {
   shop_id: string;
@@ -56,6 +57,7 @@ export default function GuestOrder() {
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [pageRange, setPageRange] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'PAYSTACK' | 'CASH'>('PAYSTACK');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,12 +120,30 @@ export default function GuestOrder() {
     return [{ min: 1, max: 100, price: 10.00 }];
   };
 
-  // Live dynamic cost calculation engine
-  useEffect(() => {
-    if (!selectedShop) {
-      setCalculatedCost(1.0);
-      return;
+  const getPagesToPrint = () => {
+    if (!pageRange || pageRange.trim().toLowerCase() === 'all') return pagesDetected;
+    let count = 0;
+    const parts = pageRange.split(',');
+    for (const part of parts) {
+      const bounds = part.split('-').map(b => parseInt(b.trim(), 10));
+      if (bounds.length === 1 && !isNaN(bounds[0])) {
+        if (bounds[0] >= 1 && bounds[0] <= pagesDetected) count += 1;
+      } else if (bounds.length === 2 && !isNaN(bounds[0]) && !isNaN(bounds[1])) {
+        const start = Math.max(1, Math.min(bounds[0], bounds[1]));
+        const end = Math.min(pagesDetected, Math.max(bounds[0], bounds[1]));
+        if (start <= end) count += (end - start + 1);
+      }
     }
+    return count > 0 ? count : pagesDetected;
+  };
+
+  // Cost Calculator
+  useEffect(() => {
+    if (!selectedShop) return;
+    
+    const pagesToPrint = getPagesToPrint();
+    const isImage = file && file.type.startsWith('image/');
+    const isSinglePage = pagesToPrint === 1;
 
     let unitPrice = 0.5;
     if (paperSize === 'A4') {
@@ -134,14 +154,11 @@ export default function GuestOrder() {
       unitPrice = colorOption === 'COLOR' ? (selectedShop.price_letter_color ?? 1.2) : (selectedShop.price_letter_bw ?? 0.6);
     }
 
-    const isImage = file && file.type.startsWith('image/');
-    const isSinglePage = pagesDetected === 1;
-
     if (sidedOption === 'DOUBLE' && !isImage && !isSinglePage) {
       unitPrice *= 1.5;
     }
 
-    let total = unitPrice * copies * pagesDetected;
+    let total = unitPrice * copies * pagesToPrint;
 
     if (binding && selectedShop.supports_binding) {
       const tiers = getBindingTiers(selectedShop.binding_pricing);
@@ -157,7 +174,7 @@ export default function GuestOrder() {
     }
 
     setCalculatedCost(Math.max(total, 0.5));
-  }, [selectedShop, copies, colorOption, sidedOption, paperSize, binding, lamination, file, pagesDetected]);
+  }, [selectedShop, copies, colorOption, sidedOption, paperSize, binding, lamination, file, pagesDetected, pageRange]);
 
   const toggleSection = (section: string) => {
     setExpandedSection(prev => prev === section ? null : section);
@@ -215,7 +232,8 @@ export default function GuestOrder() {
           sided_option: sidedOption,
           binding,
           lamination,
-          paper_size: paperSize
+          paper_size: paperSize,
+          page_range: pageRange
         }]
       };
 
@@ -615,6 +633,22 @@ export default function GuestOrder() {
               </div>
               <span className={styles.settingsSubLabel} style={{ display: 'block', marginTop: '-8px', marginBottom: '16px' }}>Number of copies</span>
             </div>
+
+            {pagesDetected > 1 && (
+              <div className={styles.settingsSection}>
+                <div className={styles.settingsLabel}>Page Range</div>
+                <input 
+                  type="text" 
+                  placeholder="e.g. 1-5, 8, 11-13 (Leave blank for All)"
+                  value={pageRange}
+                  onChange={(e) => setPageRange(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '15px', color: '#0F172A', backgroundColor: '#FFFFFF' }}
+                />
+                <span className={styles.settingsSubLabel} style={{ display: 'block', marginTop: '8px' }}>
+                  Total pages detected: {pagesDetected}. Printing: {getPagesToPrint()} pages.
+                </span>
+              </div>
+            )}
 
             <div className={styles.settingsSection}>
               <div className={styles.settingsLabel}>Color</div>
