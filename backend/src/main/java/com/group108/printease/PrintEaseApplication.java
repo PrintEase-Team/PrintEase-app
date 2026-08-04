@@ -20,7 +20,9 @@ public class PrintEaseApplication {
         return args -> {
             try {
                 jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk8usegh22yymqae5jjt4pdb3k");
+                jdbcTemplate.execute("DROP INDEX IF EXISTS uk8usegh22yymqae5jjt4pdb3k");
                 jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS users_tbl_email_key");
+                jdbcTemplate.execute("DROP INDEX IF EXISTS users_tbl_email_key");
                 jdbcTemplate.execute("UPDATE users_tbl SET is_verified = true WHERE is_verified = false OR is_verified IS NULL");
             } catch (Exception e) {
                 System.out.println("Notice: Could not execute database startup maintenance: " + e.getMessage());
