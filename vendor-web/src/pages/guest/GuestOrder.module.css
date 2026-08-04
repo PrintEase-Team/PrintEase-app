@@ -146,12 +146,10 @@
 }
 
 .splashHeroIcon {
-  width: 240px;
-  height: 160px;
+  width: 200px;
+  height: 140px;
   margin-bottom: 24px;
-  object-fit: cover;
-  border-radius: 20px;
-  box-shadow: 0 12px 30px rgba(0, 82, 255, 0.15);
+  object-fit: contain;
 }
 
 .splashTitle {
