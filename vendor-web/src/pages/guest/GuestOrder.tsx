@@ -196,7 +196,7 @@ export default function GuestOrder() {
       if (selected.type === 'application/pdf') {
         try {
           const fileUrl = URL.createObjectURL(selected);
-          const pdf = await pdfjsLib.getDocument(fileUrl).promise;
+          const pdf = await pdfjsLib.getDocument({ url: fileUrl }).promise;
           setPagesDetected(pdf.numPages);
           URL.revokeObjectURL(fileUrl);
         } catch (error) {
