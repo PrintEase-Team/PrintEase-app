@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Printer, Upload, CheckCircle2, FileText, CreditCard, ShieldCheck, 
-  ArrowLeft, ArrowRight, Store, ChevronRight, Sliders, User, Phone, Mail, QrCode, 
+  ArrowLeft, ArrowRight, Store, ChevronRight, ChevronDown, ChevronUp, Sliders, User, Phone, Mail, QrCode, 
   Tag, Bell, Copy, Check, DollarSign, Wallet, Lock, Camera, FolderOpen
 } from 'lucide-react';
 import styles from './GuestOrder.module.css';
@@ -42,6 +42,7 @@ export default function GuestOrder() {
   const [shops, setShops] = useState<PrintShop[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<string>(shopIdFromUrl || '');
   const [selectedShop, setSelectedShop] = useState<PrintShop | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>('PRINTING');
 
   const [file, setFile] = useState<File | null>(null);
   const [pagesDetected, setPagesDetected] = useState(1);
@@ -154,6 +155,10 @@ export default function GuestOrder() {
 
     setCalculatedCost(Math.max(total, 0.5));
   }, [selectedShop, copies, colorOption, sidedOption, paperSize, binding, lamination]);
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(prev => prev === section ? null : section);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -334,15 +339,14 @@ export default function GuestOrder() {
       {/* HEADER NAVBAR */}
       <div className={styles.header}>
         <div className={styles.brandRow}>
-          <div style={{ backgroundColor: '#0052FF', borderRadius: '8px', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Printer size={20} color="#FFFFFF" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/web-logo-img.png" alt="PrintEase Logo" style={{ height: '32px', objectFit: 'contain' }} />
           </div>
           <div>
             <h1 className={styles.brandName}>PrintEase Express</h1>
             <p className={styles.brandTagline}>Instant Counter Express Printing</p>
           </div>
         </div>
-        <Bell size={22} color="#0F172A" />
       </div>
 
       <div className={styles.wizardContainer}>
@@ -422,11 +426,11 @@ export default function GuestOrder() {
                     <span>TYPE</span>
                     <span>PRICE (GHC)</span>
                   </div>
-                  <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingBottom: '4px' }}>
-                    <span>PRINTING</span>
-                    <span></span>
+                  <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingBottom: '4px', cursor: 'pointer' }} onClick={() => toggleSection('PRINTING')}>
+                    <span style={{ fontWeight: 700, color: '#0F172A' }}>PRINTING</span>
+                    {expandedSection === 'PRINTING' ? <ChevronUp size={16} color="#64748B" /> : <ChevronDown size={16} color="#64748B" />}
                   </div>
-                  {selectedShop.supports_a4 !== false && (
+                  {expandedSection === 'PRINTING' && selectedShop.supports_a4 !== false && (
                     <>
                       <div className={styles.tableBodyRow}>
                         <span>A4 Black & White</span>
@@ -438,7 +442,7 @@ export default function GuestOrder() {
                       </div>
                     </>
                   )}
-                  {selectedShop.supports_a3 && (
+                  {expandedSection === 'PRINTING' && selectedShop.supports_a3 && (
                     <>
                       <div className={styles.tableBodyRow}>
                         <span>A3 Black & White</span>
@@ -455,11 +459,11 @@ export default function GuestOrder() {
                 {/* BINDING SECTION */}
                 {selectedShop.supports_binding && (
                   <div className={styles.rateTableGroup}>
-                    <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingTop: '16px', paddingBottom: '4px' }}>
-                      <span>BINDING</span>
-                      <span></span>
+                    <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingTop: '16px', paddingBottom: '4px', cursor: 'pointer' }} onClick={() => toggleSection('BINDING')}>
+                      <span style={{ fontWeight: 700, color: '#0F172A' }}>BINDING</span>
+                      {expandedSection === 'BINDING' ? <ChevronUp size={16} color="#64748B" /> : <ChevronDown size={16} color="#64748B" />}
                     </div>
-                    {getBindingTiers(selectedShop.binding_pricing).map((tier, idx) => (
+                    {expandedSection === 'BINDING' && getBindingTiers(selectedShop.binding_pricing).map((tier, idx) => (
                       <div key={idx} className={styles.tableBodyRow}>
                         <span>Comb Binding ({tier.min}–{tier.max} pages)</span>
                         <strong>{(Number(tier.price) || 10.00).toFixed(2)}</strong>
@@ -471,19 +475,23 @@ export default function GuestOrder() {
                 {/* LAMINATION SECTION */}
                 {selectedShop.supports_lamination && (
                   <div className={styles.rateTableGroup}>
-                    <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingTop: '16px', paddingBottom: '4px' }}>
-                      <span>LAMINATION</span>
-                      <span></span>
+                    <div className={styles.tableHeaderRow} style={{ backgroundColor: '#FFFFFF', paddingTop: '16px', paddingBottom: '4px', cursor: 'pointer' }} onClick={() => toggleSection('LAMINATION')}>
+                      <span style={{ fontWeight: 700, color: '#0F172A' }}>LAMINATION</span>
+                      {expandedSection === 'LAMINATION' ? <ChevronUp size={16} color="#64748B" /> : <ChevronDown size={16} color="#64748B" />}
                     </div>
-                    <div className={styles.tableBodyRow}>
-                      <span>Lamination A4</span>
-                      <strong>{(selectedShop.price_lamination_a4 ?? 5.00).toFixed(2)}</strong>
-                    </div>
-                    {selectedShop.supports_a3 && (
-                      <div className={styles.tableBodyRow}>
-                        <span>Lamination A3</span>
-                        <strong>{(selectedShop.price_lamination_a3 ?? 8.00).toFixed(2)}</strong>
-                      </div>
+                    {expandedSection === 'LAMINATION' && (
+                      <>
+                        <div className={styles.tableBodyRow}>
+                          <span>Lamination A4</span>
+                          <strong>{(selectedShop.price_lamination_a4 ?? 5.00).toFixed(2)}</strong>
+                        </div>
+                        {selectedShop.supports_a3 && (
+                          <div className={styles.tableBodyRow}>
+                            <span>Lamination A3</span>
+                            <strong>{(selectedShop.price_lamination_a3 ?? 8.00).toFixed(2)}</strong>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
