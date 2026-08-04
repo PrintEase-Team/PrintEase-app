@@ -71,6 +71,16 @@ public class FileServiceimpl implements FileService {
         fileEntity.set_deleted(false);
 
         Files savedFile = filesRepository.save(fileEntity);
+
+        // Link any unlinked print settings for this order to the uploaded file
+        List<com.group108.printease.entities.Print_Settings> settings = printSettingsRepository.findByOrder(order);
+        for (com.group108.printease.entities.Print_Settings s : settings) {
+            if (s.getFile_id() == null) {
+                s.setFile_id(savedFile);
+                printSettingsRepository.save(s);
+            }
+        }
+
         return Filesmapper.mapToFileDto(savedFile);
     }
 

@@ -113,6 +113,16 @@ public class OrdersServiceimpl implements OrdersService {
 
         Orders savedOrder = ordersRepository.save(order);
 
+        if (request.getTotal_amount() != null) {
+            com.group108.printease.entities.Payments p = new com.group108.printease.entities.Payments();
+            p.setOrder_id(savedOrder);
+            p.setAmount(request.getTotal_amount());
+            p.setStatus(com.group108.printease.entities.Payments.payment_status.Completed);
+            p.setPayment_method(request.getPayment_method() != null ? request.getPayment_method() : "Cash");
+            p.setReference("PE-GUEST-" + System.currentTimeMillis());
+            paymentRepository.save(p);
+        }
+
         if (request.getFiles() != null && !request.getFiles().isEmpty()) {
             for (var fileDto : request.getFiles()) {
                 if (fileDto.getFile_id() != null) {
@@ -320,7 +330,7 @@ public class OrdersServiceimpl implements OrdersService {
             com.group108.printease.entities.Print_Settings matchingSetting = allSettings.stream()
                 .filter(s -> s.getFile_id() != null && s.getFile_id().getFile_id().equals(file.getFile_id()))
                 .findFirst()
-                .orElse(null);
+                .orElseGet(() -> allSettings.stream().filter(s -> s.getFile_id() == null).findFirst().orElse(null));
                 
             // Removed fallback for ghost files so they strictly remain orphaned.
 

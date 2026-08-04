@@ -46,6 +46,8 @@ public class OrdersController {
         private String guest_name;
         private String guest_phone;
         private String guest_email;
+        private String payment_method;
+        private java.math.BigDecimal total_amount;
         private List<GuestOrderFileDto> files;
     }
 
