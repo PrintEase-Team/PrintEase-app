@@ -381,108 +381,81 @@ export default function GuestOrder() {
                 <div className={styles.rateTableGroup}>
                   <div className={styles.tableHeaderRow}>
                     <span>PRINTING</span>
-                    <span>DESCRIPTION</span>
                     <span>PRICE (GH₵)</span>
                   </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>A4 Black & White</span>
-                    <span>Per page</span>
-                    <strong>{(selectedShop.price_a4_bw ?? 0.50).toFixed(2)}</strong>
-                  </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>A4 Color</span>
-                    <span>Per page</span>
-                    <strong>{(selectedShop.price_a4_color ?? 1.00).toFixed(2)}</strong>
-                  </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>A3 Black & White</span>
-                    <span>Per page</span>
-                    <strong>{(selectedShop.price_a3_bw ?? 0.80).toFixed(2)}</strong>
-                  </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>A3 Color</span>
-                    <span>Per page</span>
-                    <strong>{(selectedShop.price_a3_color ?? 1.50).toFixed(2)}</strong>
-                  </div>
-                </div>
-
-                {/* BINDING SECTION */}
-                <div className={styles.rateTableGroup}>
-                  <div className={styles.tableHeaderRow}>
-                    <span>BINDING</span>
-                    <span>DESCRIPTION</span>
-                    <span>PRICE (GH₵)</span>
-                  </div>
-                  {getBindingTiers(selectedShop.binding_pricing).map((tier, idx) => (
-                    <div key={idx} className={styles.tableBodyRow}>
-                      <span>Comb Binding ({tier.min}–{tier.max} pages)</span>
-                      <span>Plastic comb</span>
-                      <strong>{(Number(tier.price) || 10.00).toFixed(2)}</strong>
-                    </div>
-                  ))}
-                  {getBindingTiers(selectedShop.binding_pricing).length === 1 && (
+                  {selectedShop.supports_a4 !== false && (
                     <>
                       <div className={styles.tableBodyRow}>
-                        <span>Comb Binding (101–200 pages)</span>
-                        <span>Plastic comb</span>
-                        <strong>15.00</strong>
+                        <span>A4 Black & White</span>
+                        <strong>GH₵ {(selectedShop.price_a4_bw ?? 0.50).toFixed(2)}</strong>
                       </div>
                       <div className={styles.tableBodyRow}>
-                        <span>Comb Binding (201–300 pages)</span>
-                        <span>Plastic comb</span>
-                        <strong>20.00</strong>
+                        <span>A4 Color</span>
+                        <strong>GH₵ {(selectedShop.price_a4_color ?? 1.00).toFixed(2)}</strong>
+                      </div>
+                    </>
+                  )}
+                  {selectedShop.supports_a3 && (
+                    <>
+                      <div className={styles.tableBodyRow}>
+                        <span>A3 Black & White</span>
+                        <strong>GH₵ {(selectedShop.price_a3_bw ?? 0.80).toFixed(2)}</strong>
+                      </div>
+                      <div className={styles.tableBodyRow}>
+                        <span>A3 Color</span>
+                        <strong>GH₵ {(selectedShop.price_a3_color ?? 1.50).toFixed(2)}</strong>
+                      </div>
+                    </>
+                  )}
+                  {selectedShop.supports_letter && (
+                    <>
+                      <div className={styles.tableBodyRow}>
+                        <span>Letter Black & White</span>
+                        <strong>GH₵ {(selectedShop.price_letter_bw ?? 0.60).toFixed(2)}</strong>
+                      </div>
+                      <div className={styles.tableBodyRow}>
+                        <span>Letter Color</span>
+                        <strong>GH₵ {(selectedShop.price_letter_color ?? 1.20).toFixed(2)}</strong>
                       </div>
                     </>
                   )}
                 </div>
 
-                {/* LAMINATION SECTION */}
-                <div className={styles.rateTableGroup}>
-                  <div className={styles.tableHeaderRow}>
-                    <span>LAMINATION</span>
-                    <span>DESCRIPTION</span>
-                    <span>PRICE (GH₵)</span>
+                {/* BINDING SECTION */}
+                {selectedShop.supports_binding && (
+                  <div className={styles.rateTableGroup}>
+                    <div className={styles.tableHeaderRow}>
+                      <span>BINDING</span>
+                      <span>PRICE (GH₵)</span>
+                    </div>
+                    {getBindingTiers(selectedShop.binding_pricing).map((tier, idx) => (
+                      <div key={idx} className={styles.tableBodyRow}>
+                        <span>Comb Binding ({tier.min}–{tier.max} pages)</span>
+                        <strong>GH₵ {(Number(tier.price) || 10.00).toFixed(2)}</strong>
+                      </div>
+                    ))}
                   </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>Lamination A4</span>
-                    <span>Glossy finish</span>
-                    <strong>{(selectedShop.price_lamination_a4 ?? 5.00).toFixed(2)}</strong>
-                  </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>Lamination A3</span>
-                    <span>Glossy finish</span>
-                    <strong>{(selectedShop.price_lamination_a3 ?? 8.00).toFixed(2)}</strong>
-                  </div>
-                </div>
+                )}
 
-                {/* EXTRAS SECTION */}
-                <div className={styles.rateTableGroup}>
-                  <div className={styles.tableHeaderRow}>
-                    <span>EXTRAS</span>
-                    <span>DESCRIPTION</span>
-                    <span>PRICE (GH₵)</span>
+                {/* LAMINATION SECTION */}
+                {selectedShop.supports_lamination && (
+                  <div className={styles.rateTableGroup}>
+                    <div className={styles.tableHeaderRow}>
+                      <span>LAMINATION</span>
+                      <span>PRICE (GH₵)</span>
+                    </div>
+                    <div className={styles.tableBodyRow}>
+                      <span>Lamination A4</span>
+                      <strong>GH₵ {(selectedShop.price_lamination_a4 ?? 5.00).toFixed(2)}</strong>
+                    </div>
+                    {selectedShop.supports_a3 && (
+                      <div className={styles.tableBodyRow}>
+                        <span>Lamination A3</span>
+                        <strong>GH₵ {(selectedShop.price_lamination_a3 ?? 8.00).toFixed(2)}</strong>
+                      </div>
+                    )}
                   </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>Photocopy (B&W)</span>
-                    <span>Per page</span>
-                    <strong>0.50</strong>
-                  </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>Photocopy (Color)</span>
-                    <span>Per page</span>
-                    <strong>1.00</strong>
-                  </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>Scan</span>
-                    <span>Per page</span>
-                    <strong>1.00</strong>
-                  </div>
-                  <div className={styles.tableBodyRow}>
-                    <span>Bind (Hardcover)</span>
-                    <span>Per copy</span>
-                    <strong>5.00</strong>
-                  </div>
-                </div>
+                )}
 
                 {/* SERVICES AVAILABLE BADGES */}
                 <div className={styles.servicesFooterRow}>
