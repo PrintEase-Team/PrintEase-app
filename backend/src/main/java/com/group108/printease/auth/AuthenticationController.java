@@ -23,6 +23,7 @@ public class AuthenticationController {
             jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS users_tbl_email_key CASCADE");
             jdbcTemplate.execute("DROP INDEX IF EXISTS users_tbl_email_key CASCADE");
             jdbcTemplate.execute("ALTER TABLE users_tbl DROP CONSTRAINT IF EXISTS uk_email_role CASCADE");
+            jdbcTemplate.execute("DELETE FROM print_shops WHERE vendor_id IN (SELECT user_id FROM users_tbl WHERE email LIKE 'audit_%')");
             jdbcTemplate.execute("DELETE FROM users_tbl WHERE email LIKE 'audit_%'");
             jdbcTemplate.execute("DELETE FROM users_tbl WHERE user_id NOT IN (SELECT (ARRAY_AGG(user_id))[1] FROM users_tbl GROUP BY email, role)");
             jdbcTemplate.execute("ALTER TABLE users_tbl ADD CONSTRAINT uk_email_role UNIQUE (email, role)");
