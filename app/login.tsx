@@ -36,6 +36,7 @@ export default function LoginScreen() {
       await login({ email, password });
       router.replace('/(tabs)');
     } catch (e: any) {
+      const errMsg = useAuthStore.getState().error || 'Invalid credentials';
       Alert.alert('Login Failed', errMsg);
     }
   };
