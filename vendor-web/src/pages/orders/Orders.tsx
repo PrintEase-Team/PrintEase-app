@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Download, ChevronLeft, ChevronRight, MoreVertical, FileText, Book, Copy, ChevronsUpDown, Image } from 'lucide-react';
@@ -12,6 +11,9 @@ import styles from './Orders.module.css';
 
 export default function Orders() {
   const navigate = useNavigate();
+  const outletContext = useOutletContext<{ shopId?: string }>();
+  const effectiveShopId = outletContext?.shopId || localStorage.getItem('shop_id');
+
   const [activeTab, setActiveTab] = useState('All Orders');
   const [orders, setOrders] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +40,7 @@ export default function Orders() {
       fetchOrders();
     }, 30000); // Poll every 30 seconds instead of 5
 
-    const shopId = localStorage.getItem('shop_id');
+    const shopId = effectiveShopId;
     const client = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws-printease`),
       debug: function (str) {
@@ -66,10 +68,10 @@ export default function Orders() {
       clearInterval(interval);
       client.deactivate();
     };
-  }, []);
+  }, [effectiveShopId]);
 
   const fetchOrders = () => {
-    const shopId = localStorage.getItem('shop_id');
+    const shopId = effectiveShopId;
     if (!shopId) return;
     fetch(`${API_BASE_URL}/api/orders/shop/${shopId}`)
       .then(res => res.json())

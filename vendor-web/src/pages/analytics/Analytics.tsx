@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { TrendingUp, TrendingDown, ChevronDown, Activity, ShoppingBag, Printer, Users, DollarSign, Image, Scan, Book, FileCheck, Info, ArrowUpRight, Loader } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
@@ -7,6 +6,9 @@ import styles from './Analytics.module.css';
 
 const API_URL = `${API_BASE_URL}/api/orders/shop/`;
 export default function Analytics() {
+  const outletContext = useOutletContext<{ shopId?: string }>();
+  const effectiveShopId = outletContext?.shopId || localStorage.getItem('shop_id');
+  
   const [data, setData] = useState<any>(null);
   const [searchParams] = useSearchParams();
   const timeRange = searchParams.get('timeRange') || 'Daily';
@@ -43,7 +45,7 @@ export default function Analytics() {
   }, [allOrders, timeRange]);
 
   useEffect(() => {
-    const shopId = localStorage.getItem('shop_id');
+    const shopId = effectiveShopId;
     if (!shopId) return;
     fetch(API_URL + shopId)
       .then(res => res.json())
@@ -156,7 +158,7 @@ export default function Analytics() {
         setData(computedData);
       })
       .catch(err => console.error("Failed to load analytics:", err));
-  }, [timeRange]);
+  }, [effectiveShopId, timeRange]);
 
   if (!data) {
     return <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '40px'}}><Loader className={styles.spinner} /> Loading Analytics...</div>;

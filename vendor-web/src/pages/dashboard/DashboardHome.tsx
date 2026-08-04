@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { API_BASE_URL } from '../../config';
@@ -25,6 +25,9 @@ import styles from './DashboardHome.module.css';
 
 export default function DashboardHome() {
   const navigate = useNavigate();
+  const outletContext = useOutletContext<{ shopId?: string }>();
+  const effectiveShopId = outletContext?.shopId || localStorage.getItem('shop_id');
+
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [dynamicChartData, setDynamicChartData] = useState<any[]>([]);
   const [metrics, setMetrics] = useState({
@@ -42,14 +45,16 @@ export default function DashboardHome() {
   const [showServicesModal, setShowServicesModal] = useState(false);
 
   useEffect(() => {
-    const shopId = localStorage.getItem('shop_id');
+    const shopId = effectiveShopId;
     if (!shopId) return;
 
     const fetchOrders = () => {
       fetch(`${API_BASE_URL}/api/orders/shop/${shopId}`)
         .then(res => res.json())
         .then(data => {
-          setAllRawOrders(data);
+          if (Array.isArray(data)) {
+            setAllRawOrders(data);
+          }
         })
         .catch(err => console.error('Error fetching dashboard orders:', err));
     };
@@ -84,7 +89,7 @@ export default function DashboardHome() {
       clearInterval(interval);
       client.deactivate();
     };
-  }, []);
+  }, [effectiveShopId]);
 
   useEffect(() => {
     if (allRawOrders.length === 0) return;

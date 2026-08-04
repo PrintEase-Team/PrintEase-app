@@ -153,6 +153,7 @@ export default function DashboardLayout() {
         if (shopRes.ok) {
           const shopDataRes = await shopRes.json();
           localStorage.setItem('shop_id', shopDataRes.shop_id);
+          window.dispatchEvent(new CustomEvent('shop_id_updated', { detail: shopDataRes.shop_id }));
           setShopData(shopDataRes);
           setIsShopOpen(calculateIsCurrentlyOpen(shopDataRes));
           if (shopDataRes.profile_picture_url) {
@@ -345,7 +346,7 @@ export default function DashboardLayout() {
 
         {/* Page Content */}
         <div className={styles.pageContent} style={{ padding: isOrderDetailsPage ? 0 : 32 }}>
-          <Outlet />
+          <Outlet context={{ shopId: shopData?.shop_id || localStorage.getItem('shop_id'), shopData }} />
         </div>
       </main>
     </div>
