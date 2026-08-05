@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { TrendingUp, TrendingDown, ChevronDown, Activity, ShoppingBag, Printer, Users, DollarSign, Image, Scan, Book, FileCheck, Info, ArrowUpRight, Loader } from 'lucide-react';
